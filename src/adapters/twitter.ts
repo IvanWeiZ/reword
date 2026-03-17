@@ -1,4 +1,5 @@
 import type { PlatformAdapter, ThreadMessage } from '../shared/types';
+import { selectAllContent, insertText } from './base';
 
 export class TwitterAdapter implements PlatformAdapter {
   findInputField(): HTMLElement | null {
@@ -19,9 +20,17 @@ export class TwitterAdapter implements PlatformAdapter {
     const input = this.findInputField();
     if (!input) return false;
     input.focus();
-    document.execCommand('selectAll', false);
-    document.execCommand('insertText', false, text);
+    selectAllContent(input);
+    insertText(input, text);
     return true;
+  }
+
+  checkHealth(): boolean {
+    const input = this.findInputField();
+    const sendBtn = document.querySelector('[data-testid="dmComposerSendButton"]');
+    if (!input) console.warn('[Reword] Twitter: DM input not found');
+    if (!sendBtn) console.warn('[Reword] Twitter: send button not found');
+    return input !== null && sendBtn !== null;
   }
 
   scrapeThreadContext(): ThreadMessage[] {

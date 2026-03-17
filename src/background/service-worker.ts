@@ -7,17 +7,10 @@ import type { MessageToBackground, MessageFromBackground } from '../shared/types
 const gemini = new GeminiClient();
 const ondevice = new OnDeviceClient();
 
-type ExtendedMessage =
-  | (MessageToBackground & { type: string })
-  | { type: 'validate-api-key'; apiKey: string };
-
-export async function handleMessage(
-  message: ExtendedMessage,
-): Promise<MessageFromBackground | { type: string; valid?: boolean }> {
+export async function handleMessage(message: MessageToBackground): Promise<MessageFromBackground> {
   switch (message.type) {
     case 'validate-api-key': {
-      const msg = message as { type: 'validate-api-key'; apiKey: string };
-      const valid = await gemini.validateApiKey(msg.apiKey);
+      const valid = await gemini.validateApiKey(message.apiKey);
       return { type: 'validate-api-key-result', valid };
     }
 
@@ -27,22 +20,19 @@ export async function handleMessage(
     }
 
     case 'get-profile': {
-      const msg = message as { type: 'get-profile'; domain: string };
       const data = await loadStoredData();
-      const profile = data.relationshipProfiles[msg.domain] ?? null;
+      const profile = data.relationshipProfiles[message.domain] ?? null;
       return { type: 'profile', profile };
     }
 
     case 'increment-stat': {
-      const msg = message as { type: 'increment-stat'; stat: string };
       const data = await loadStoredData();
-      (data.stats as any)[msg.stat]++;
+      data.stats[message.stat]++;
       await saveStoredData(data);
       return { type: 'settings', data };
     }
 
     case 'analyze': {
-      const msg = message as Extract<MessageToBackground, { type: 'analyze' }>;
       try {
         const data = await loadStoredData();
 
@@ -51,7 +41,7 @@ export async function handleMessage(
         }
 
         // Tier 1: on-device AI (optional)
-        const ondeviceResult = await ondevice.checkTone(msg.text);
+        const ondeviceResult = await ondevice.checkTone(message.text);
         if (
           ondeviceResult &&
           !ondeviceResult.shouldFlag &&
@@ -79,10 +69,10 @@ export async function handleMessage(
         await saveStoredData(data);
 
         const result = await gemini.analyze(
-          msg.text,
-          msg.relationshipType,
-          msg.sensitivity,
-          msg.context,
+          message.text,
+          message.relationshipType,
+          message.sensitivity,
+          message.context,
         );
 
         if (result.shouldFlag) {
@@ -92,25 +82,21 @@ export async function handleMessage(
 
         return { type: 'analysis-result', result };
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn('[Reword] Analysis failed:', errorMessage);
         return {
           type: 'analysis-error',
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errorMessage,
         };
       }
     }
-
-    default:
-      return {
-        type: 'analysis-error',
-        error: `Unknown message type: ${(message as { type: string }).type}`,
-      };
   }
 }
 
 // Register Chrome message listener (only in extension context)
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    handleMessage(message as ExtendedMessage).then(sendResponse);
+    handleMessage(message as MessageToBackground).then(sendResponse);
     return true;
   });
 }

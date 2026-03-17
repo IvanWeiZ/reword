@@ -35,21 +35,32 @@ const NEGATIVE_KEYWORDS = [
 export function scoreMessage(text: string): number {
   if (!text || text.trim().length === 0) return 0;
 
-  let score = 0;
+  let patternScore = 0;
+  let keywordScore = 0;
+  let capsScore = 0;
+  let punctuationScore = 0;
   const lower = text.toLowerCase();
 
-  // Check passive-aggressive patterns (high signal)
+  // Check passive-aggressive patterns (high signal) — cap at one match worth
+  let patternMatches = 0;
   for (const pattern of PASSIVE_AGGRESSIVE_PATTERNS) {
     if (pattern.test(text)) {
-      score += 0.35;
+      patternMatches++;
     }
   }
+  if (patternMatches > 0) {
+    patternScore = Math.min(0.5, 0.35 * patternMatches);
+  }
 
-  // Check negative keywords
+  // Check negative keywords — cap contribution
+  let keywordMatches = 0;
   for (const keyword of NEGATIVE_KEYWORDS) {
     if (lower.includes(keyword)) {
-      score += 0.2;
+      keywordMatches++;
     }
+  }
+  if (keywordMatches > 0) {
+    keywordScore = Math.min(0.4, 0.2 * keywordMatches);
   }
 
   // ALL CAPS detection (check if >50% of alpha chars are uppercase)
@@ -57,15 +68,15 @@ export function scoreMessage(text: string): number {
   if (alphaChars.length >= 10) {
     const upperRatio = text.replace(/[^A-Z]/g, '').length / alphaChars.length;
     if (upperRatio > 0.5) {
-      score += 0.3;
+      capsScore = 0.3;
     }
   }
 
-  // Excessive punctuation (!! or ?? or ?!)
+  // Excessive punctuation (!! or ?? or ?!) — cap contribution
   const excessivePunctuation = text.match(/[!?]{2,}/g);
   if (excessivePunctuation) {
-    score += 0.3 * excessivePunctuation.length;
+    punctuationScore = Math.min(0.4, 0.3 * excessivePunctuation.length);
   }
 
-  return Math.min(1, Math.max(0, score));
+  return Math.min(1, Math.max(0, patternScore + keywordScore + capsScore + punctuationScore));
 }

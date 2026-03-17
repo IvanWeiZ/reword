@@ -113,7 +113,7 @@ function init(): void {
     domCheckTimer = setTimeout(() => {
       domCheckTimer = null;
       const input = adapter.findInputField();
-      if (input && input !== (observer as any)['element']) {
+      if (input && input !== observer.currentElement) {
         observer.observe(input);
       }
     }, 500);

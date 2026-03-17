@@ -1,4 +1,5 @@
 import type { PlatformAdapter, ThreadMessage } from '../shared/types';
+import { selectAllContent, insertText } from './base';
 
 export class GmailAdapter implements PlatformAdapter {
   findInputField(): HTMLElement | null {
@@ -19,9 +20,17 @@ export class GmailAdapter implements PlatformAdapter {
     const input = this.findInputField();
     if (!input) return false;
     input.focus();
-    document.execCommand('selectAll', false);
-    document.execCommand('insertText', false, text);
+    selectAllContent(input);
+    insertText(input, text);
     return true;
+  }
+
+  checkHealth(): boolean {
+    const input = this.findInputField();
+    const sendBtn = document.querySelector('.btC .dC');
+    if (!input) console.warn('[Reword] Gmail: compose input not found');
+    if (!sendBtn) console.warn('[Reword] Gmail: send button row not found');
+    return input !== null && sendBtn !== null;
   }
 
   scrapeThreadContext(): ThreadMessage[] {

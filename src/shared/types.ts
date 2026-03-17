@@ -70,6 +70,9 @@ export interface PlatformAdapter {
 
   /** Scrape recent visible messages from the thread. Returns [] if not supported. */
   scrapeThreadContext(): ThreadMessage[];
+
+  /** Check if expected DOM selectors are present. Logs warnings for missing elements. */
+  checkHealth(): boolean;
 }
 
 // --- Message passing between content script and service worker ---
@@ -84,10 +87,12 @@ export type MessageToBackground =
     }
   | { type: 'get-settings' }
   | { type: 'get-profile'; domain: string }
-  | { type: 'increment-stat'; stat: keyof Stats };
+  | { type: 'increment-stat'; stat: keyof Stats }
+  | { type: 'validate-api-key'; apiKey: string };
 
 export type MessageFromBackground =
   | { type: 'analysis-result'; result: AnalysisResult }
   | { type: 'analysis-error'; error: string }
   | { type: 'settings'; data: StoredData }
-  | { type: 'profile'; profile: RelationshipProfile | null };
+  | { type: 'profile'; profile: RelationshipProfile | null }
+  | { type: 'validate-api-key-result'; valid: boolean };

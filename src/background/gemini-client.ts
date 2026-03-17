@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { AnalysisResult, RelationshipType, Sensitivity, ThreadMessage } from '../shared/types';
 import { buildAnalysisPrompt } from '../shared/prompts';
+import { API_TIMEOUT_MS } from '../shared/constants';
 
 export type StreamCallback = (partialText: string) => void;
 
@@ -40,12 +41,22 @@ export class GeminiClient {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
+    const timeoutId = setTimeout(() => {
+      if (!signal?.aborted) {
+        throw new DOMException('API call timed out', 'TimeoutError');
+      }
+    }, API_TIMEOUT_MS);
+
     let fullText = '';
-    for await (const chunk of streamResult.stream) {
-      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-      const chunkText = chunk.text();
-      fullText += chunkText;
-      onStream(fullText);
+    try {
+      for await (const chunk of streamResult.stream) {
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        const chunkText = chunk.text();
+        fullText += chunkText;
+        onStream(fullText);
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     return parseAnalysisResponse(fullText);
@@ -74,7 +85,8 @@ export class GeminiClient {
       const model = testClient.getGenerativeModel({ model: 'gemini-2.5-flash' });
       await model.generateContent('Say "ok"');
       return true;
-    } catch {
+    } catch (error) {
+      console.warn('[Reword] API key validation failed:', error);
       return false;
     }
   }

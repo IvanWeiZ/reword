@@ -33,6 +33,10 @@ export class InputObserver {
     element.addEventListener('input', this.handler);
   }
 
+  get currentElement(): HTMLElement | null {
+    return this.element;
+  }
+
   disconnect(): void {
     if (this.element && this.handler) {
       this.element.removeEventListener('input', this.handler);

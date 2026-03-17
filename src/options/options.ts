@@ -101,8 +101,10 @@ function bindEvents() {
         status.textContent = 'Invalid key';
         status.style.color = '#ef5350';
       }
-    } catch {
-      status.textContent = 'Error validating';
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Unknown error';
+      console.warn('[Reword] API key validation error:', detail);
+      status.textContent = `Validation failed: ${detail}`;
       status.style.color = '#ef5350';
     }
   });
@@ -117,8 +119,9 @@ function bindEvents() {
     const domain = (document.getElementById('new-profile-domain') as HTMLInputElement).value.trim();
     const type = (document.getElementById('new-profile-type') as HTMLSelectElement)
       .value as RelationshipType;
-    const label = (document.getElementById('new-profile-label') as HTMLInputElement).value.trim();
-    if (!domain) return;
+    let label = (document.getElementById('new-profile-label') as HTMLInputElement).value.trim();
+    if (!domain || !isValidDomain(domain)) return;
+    if (label.length > 50) label = label.slice(0, 50);
 
     data.relationshipProfiles[domain] = { type, label: label || type };
     await saveStoredData(data);
@@ -129,13 +132,19 @@ function bindEvents() {
 
   document.getElementById('add-domain')!.addEventListener('click', async () => {
     const domain = (document.getElementById('new-domain') as HTMLInputElement).value.trim();
-    if (!domain || data.settings.enabledDomains.includes(domain)) return;
+    if (!domain || !isValidDomain(domain) || data.settings.enabledDomains.includes(domain)) return;
 
     data.settings.enabledDomains.push(domain);
     await saveStoredData(data);
     (document.getElementById('new-domain') as HTMLInputElement).value = '';
     renderDomains();
   });
+}
+
+function isValidDomain(domain: string): boolean {
+  return /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/.test(
+    domain,
+  );
 }
 
 function esc(text: string): string {
