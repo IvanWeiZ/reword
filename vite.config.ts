@@ -1,7 +1,11 @@
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { readFileSync, copyFileSync, mkdirSync, cpSync } from 'fs';
+import { copyFileSync, mkdirSync, cpSync, existsSync } from 'fs';
 import { join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   build: {
@@ -28,7 +32,9 @@ export default defineConfig({
         mkdirSync(join('dist', 'options'), { recursive: true });
         copyFileSync('src/options/options.html', join('dist', 'options', 'options.html'));
         copyFileSync('src/options/options.css', join('dist', 'options', 'options.css'));
-        cpSync('assets', join('dist', 'assets'), { recursive: true });
+        if (existsSync('assets')) {
+          cpSync(join('assets'), join('dist', 'assets'), { recursive: true });
+        }
       },
     },
   ],
