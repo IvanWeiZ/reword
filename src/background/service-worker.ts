@@ -83,7 +83,7 @@ export async function handleMessage(message: ExtendedMessage): Promise<MessageFr
     }
 
     default:
-      return { type: 'analysis-error', error: `Unknown message type: ${message.type}` };
+      return { type: 'analysis-error', error: `Unknown message type: ${(message as { type: string }).type}` };
   }
 }
 
