@@ -1,159 +1,19 @@
 import { loadStoredData, saveStoredData } from '../shared/storage';
 import type { StoredData, RelationshipType, Sensitivity } from '../shared/types';
+import {
+  renderAll,
+  renderProfiles,
+  renderDomains,
+  renderPatterns,
+  renderPersonas,
+} from './renderers';
 
 let data: StoredData;
 
 async function init() {
   data = await loadStoredData();
-  renderAll();
+  renderAll(data);
   bindEvents();
-}
-
-function renderAll() {
-  const keyInput = document.getElementById('api-key') as HTMLInputElement;
-  if (data.settings.geminiApiKey) {
-    keyInput.value = '••••••••' + data.settings.geminiApiKey.slice(-4);
-  }
-
-  const sensitivitySelect = document.getElementById('sensitivity') as HTMLSelectElement;
-  sensitivitySelect.value = data.settings.sensitivity;
-
-  const themeSelect = document.getElementById('theme') as HTMLSelectElement;
-  themeSelect.value = data.settings.theme;
-
-  const incomingCheckbox = document.getElementById('analyze-incoming') as HTMLInputElement;
-  incomingCheckbox.checked = data.settings.analyzeIncoming;
-
-  renderProfiles();
-  renderDomains();
-  renderPatterns();
-  renderPersonas();
-  renderStats();
-  renderHistory();
-}
-
-function renderProfiles() {
-  const list = document.getElementById('profiles-list')!;
-  list.innerHTML = Object.entries(data.relationshipProfiles)
-    .map(
-      ([domain, profile]) => `
-      <div class="profile-item">
-        <span><strong>${esc(domain)}</strong> — ${esc(profile.type)} (${esc(profile.label)})${profile.sensitivity ? ` [${profile.sensitivity}]` : ''}</span>
-        <button data-remove-profile="${esc(domain)}">Remove</button>
-      </div>
-    `,
-    )
-    .join('');
-
-  list.querySelectorAll<HTMLElement>('[data-remove-profile]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const domain = btn.dataset.removeProfile!;
-      delete data.relationshipProfiles[domain];
-      await saveStoredData(data);
-      renderProfiles();
-    });
-  });
-}
-
-function renderDomains() {
-  const list = document.getElementById('domains-list')!;
-  list.innerHTML = data.settings.enabledDomains
-    .map(
-      (d) => `
-      <div class="domain-item">
-        <span>${esc(d)}</span>
-        <button data-remove-domain="${esc(d)}">Remove</button>
-      </div>
-    `,
-    )
-    .join('');
-
-  list.querySelectorAll<HTMLElement>('[data-remove-domain]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const domain = btn.dataset.removeDomain!;
-      data.settings.enabledDomains = data.settings.enabledDomains.filter((d) => d !== domain);
-      await saveStoredData(data);
-      renderDomains();
-    });
-  });
-}
-
-function renderPatterns() {
-  const list = document.getElementById('patterns-list')!;
-  list.innerHTML = data.settings.customPatterns
-    .map(
-      (p, i) => `
-      <div class="pattern-item">
-        <code>${esc(p)}</code>
-        <button data-remove-pattern="${i}">Remove</button>
-      </div>
-    `,
-    )
-    .join('');
-
-  list.querySelectorAll<HTMLElement>('[data-remove-pattern]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const idx = parseInt(btn.dataset.removePattern!, 10);
-      data.settings.customPatterns.splice(idx, 1);
-      await saveStoredData(data);
-      renderPatterns();
-    });
-  });
-}
-
-function renderPersonas() {
-  const list = document.getElementById('personas-list')!;
-  list.innerHTML = data.settings.rewritePersonas
-    .map(
-      (p, i) => `
-      <div class="persona-item">
-        <span><strong>${esc(p.label)}</strong>: ${esc(p.instruction)}</span>
-        <button data-remove-persona="${i}">Remove</button>
-      </div>
-    `,
-    )
-    .join('');
-
-  list.querySelectorAll<HTMLElement>('[data-remove-persona]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const idx = parseInt(btn.dataset.removePersona!, 10);
-      data.settings.rewritePersonas.splice(idx, 1);
-      await saveStoredData(data);
-      renderPersonas();
-    });
-  });
-}
-
-function renderStats() {
-  const stats = document.getElementById('stats')!;
-  stats.innerHTML = `
-    <div>Messages analyzed: ${data.stats.totalAnalyzed}</div>
-    <div>Messages flagged: ${data.stats.totalFlagged}</div>
-    <div>Rewrites accepted: ${data.stats.rewritesAccepted}</div>
-    <div>API calls this month: ${data.stats.monthlyApiCalls}</div>
-  `;
-}
-
-function renderHistory() {
-  const container = document.getElementById('history')!;
-  if (data.stats.recentFlags.length === 0) {
-    container.innerHTML = '<p class="hint">No flagged messages yet.</p>';
-    return;
-  }
-
-  container.innerHTML = data.stats.recentFlags
-    .slice(0, 50)
-    .map(
-      (f) => `
-      <div class="history-item">
-        <span class="history-date">${new Date(f.date).toLocaleString()}</span>
-        <span class="history-platform">${esc(f.platform)}</span>
-        <span class="history-risk history-risk-${f.riskLevel}">${f.riskLevel}</span>
-        <span class="history-snippet">${esc(f.textSnippet)}</span>
-      </div>
-    `,
-    )
-    .join('');
 }
 
 function bindEvents() {
@@ -224,7 +84,7 @@ function bindEvents() {
     await saveStoredData(data);
     (document.getElementById('new-profile-domain') as HTMLInputElement).value = '';
     (document.getElementById('new-profile-label') as HTMLInputElement).value = '';
-    renderProfiles();
+    renderProfiles(data);
   });
 
   // Add domain
@@ -235,7 +95,7 @@ function bindEvents() {
     data.settings.enabledDomains.push(domain);
     await saveStoredData(data);
     (document.getElementById('new-domain') as HTMLInputElement).value = '';
-    renderDomains();
+    renderDomains(data);
   });
 
   // Add custom pattern (#9)
@@ -258,7 +118,7 @@ function bindEvents() {
     }
     input.value = '';
     input.style.borderColor = '';
-    renderPatterns();
+    renderPatterns(data);
   });
 
   // Add persona (#13)
@@ -273,7 +133,7 @@ function bindEvents() {
     await saveStoredData(data);
     labelInput.value = '';
     instrInput.value = '';
-    renderPersonas();
+    renderPersonas(data);
   });
 
   // Export data (#12)
@@ -303,7 +163,7 @@ function bindEvents() {
       }
       data = imported;
       await saveStoredData(data);
-      renderAll();
+      renderAll(data);
     } catch (error) {
       console.warn('[Reword] Import failed:', error);
     }
@@ -314,12 +174,6 @@ function isValidDomain(domain: string): boolean {
   return /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/.test(
     domain,
   );
-}
-
-function esc(text: string): string {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
 }
 
 init();

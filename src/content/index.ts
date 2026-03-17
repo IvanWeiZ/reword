@@ -3,25 +3,27 @@ import type {
   AnalysisResult,
   MessageToBackground,
   MessageFromBackground,
-  IncomingAnalysis,
   Theme,
 } from '../shared/types';
 import {
   DEBOUNCE_MS,
   MIN_MESSAGE_LENGTH,
   HEURISTIC_THRESHOLD,
-  INCOMING_CHECK_INTERVAL_MS,
 } from '../shared/constants';
 import { scoreMessage } from './heuristic-scorer';
 import { InputObserver } from './observer';
 import { TriggerIcon } from './trigger';
 import { PopupCard } from './popup-card';
-import { GmailAdapter } from '../adapters/gmail';
-import { LinkedInAdapter } from '../adapters/linkedin';
-import { TwitterAdapter } from '../adapters/twitter';
-import { SlackAdapter } from '../adapters/slack';
-import { DiscordAdapter } from '../adapters/discord';
-import { GenericFallbackAdapter } from '../adapters/base';
+import { normalizeSnippet, deriveRecipientStyle } from './helpers';
+import { startIncomingAnalysis } from './incoming-analyzer';
+import {
+  GmailAdapter,
+  LinkedInAdapter,
+  TwitterAdapter,
+  SlackAdapter,
+  DiscordAdapter,
+  GenericFallbackAdapter,
+} from '../adapters';
 
 function detectAdapter(): PlatformAdapter {
   const host = window.location.hostname;
@@ -35,23 +37,6 @@ function detectAdapter(): PlatformAdapter {
 
 async function sendMessage(msg: MessageToBackground): Promise<MessageFromBackground> {
   return chrome.runtime.sendMessage(msg);
-}
-
-/** Derive recipient communication style from recent thread messages (#8). */
-function deriveRecipientStyle(adapter: PlatformAdapter): string | undefined {
-  const context = adapter.scrapeThreadContext();
-  const otherMessages = context.filter((m) => m.sender === 'other').map((m) => m.text);
-  if (otherMessages.length === 0) return undefined;
-  // Summarize style signals: avg length, formality cues
-  const avgLen = otherMessages.reduce((s, t) => s + t.length, 0) / otherMessages.length;
-  const hasEmojis = otherMessages.some((t) => /[\u{1F600}-\u{1F64F}]/u.test(t));
-  const hasExclamation = otherMessages.some((t) => t.includes('!'));
-  const parts: string[] = [];
-  if (avgLen < 30) parts.push('brief');
-  else if (avgLen > 150) parts.push('detailed');
-  if (hasEmojis) parts.push('uses emojis');
-  if (hasExclamation) parts.push('expressive');
-  return parts.length > 0 ? parts.join(', ') : undefined;
 }
 
 function init(): void {
@@ -72,13 +57,11 @@ function init(): void {
       sendMessage({ type: 'increment-stat', stat: 'rewritesAccepted' });
     },
     onDismiss: () => {
-      // Record dismissal for learning mode (#6)
       if (currentText) {
         sendMessage({ type: 'record-dismiss', textSnippet: normalizeSnippet(currentText) });
       }
     },
     onUndo: () => {
-      // Undo rewrite (#11) — restore previous text
       if (previousText) {
         adapter.writeBack(previousText);
       }
@@ -216,84 +199,6 @@ function init(): void {
   // Initial check
   const input = adapter.findInputField();
   if (input) observer.observe(input);
-}
-
-/** Normalize text to a comparable snippet for learning mode (#6). */
-function normalizeSnippet(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .trim()
-    .slice(0, 60);
-}
-
-/** Two-way analysis: periodically check incoming messages (#14). */
-function startIncomingAnalysis(adapter: PlatformAdapter, _theme: Theme): void {
-  const analyzed = new WeakSet<HTMLElement>();
-  const cleanups: (() => void)[] = [];
-
-  setInterval(async () => {
-    const elements = adapter.getIncomingMessageElements?.() ?? [];
-    for (const el of elements) {
-      if (analyzed.has(el)) continue;
-      analyzed.add(el);
-
-      const text = el.textContent?.trim();
-      if (!text || text.length < 10) continue;
-
-      const context = adapter.scrapeThreadContext();
-      const response = await sendMessage({
-        type: 'analyze-incoming',
-        text,
-        context,
-      });
-
-      if (response.type !== 'incoming-result') continue;
-      const result = response.result;
-      if (result.riskLevel === 'low') continue;
-
-      // Place indicator
-      const indicator = createIncomingIndicator(result);
-      const cleanup = adapter.placeIncomingIndicator?.(el, indicator);
-      if (cleanup) cleanups.push(cleanup);
-    }
-  }, INCOMING_CHECK_INTERVAL_MS);
-}
-
-function createIncomingIndicator(result: IncomingAnalysis): HTMLElement {
-  const colors = {
-    low: { bg: '#e3f2fd', text: '#1565c0' },
-    medium: { bg: '#fff3e0', text: '#e65100' },
-    high: { bg: '#ffebee', text: '#c62828' },
-  };
-  const c = colors[result.riskLevel];
-  const el = document.createElement('span');
-  el.className = 'reword-incoming-indicator';
-  el.style.backgroundColor = c.bg;
-  el.style.color = c.text;
-  el.textContent = `⚠ ${result.riskLevel} tone`;
-  el.title = result.interpretation;
-
-  el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    // Toggle tooltip
-    const existing = el.parentElement?.querySelector('.reword-incoming-tooltip');
-    if (existing) {
-      existing.remove();
-      return;
-    }
-    const tooltip = document.createElement('div');
-    tooltip.className = 'reword-incoming-tooltip';
-    tooltip.innerHTML = `
-      <div style="font-weight:600;margin-bottom:6px">Tone analysis</div>
-      <div style="margin-bottom:4px">${result.issues.map((i) => `<span>• ${i}</span>`).join('<br>')}</div>
-      <div style="margin-top:8px;font-style:italic">${result.interpretation}</div>
-    `;
-    el.parentElement?.appendChild(tooltip);
-    setTimeout(() => tooltip.remove(), 10000);
-  });
-
-  return el;
 }
 
 if (document.readyState === 'loading') {
