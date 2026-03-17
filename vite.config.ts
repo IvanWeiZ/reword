@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { readFileSync, copyFileSync, mkdirSync, cpSync } from 'fs';
+import { join } from 'path';
 
 export default defineConfig({
   build: {
@@ -12,8 +14,6 @@ export default defineConfig({
       output: {
         entryFileNames: '[name].js',
         dir: 'dist',
-        inlineDynamicImports: false,
-        manualChunks: undefined,
       },
     },
     target: 'ES2022',
@@ -24,13 +24,11 @@ export default defineConfig({
     {
       name: 'copy-manifest-and-html',
       writeBundle() {
-        const fs = require('fs');
-        const path = require('path');
-        fs.copyFileSync('manifest.json', path.join('dist', 'manifest.json'));
-        fs.mkdirSync(path.join('dist', 'options'), { recursive: true });
-        fs.copyFileSync('src/options/options.html', path.join('dist', 'options', 'options.html'));
-        fs.copyFileSync('src/options/options.css', path.join('dist', 'options', 'options.css'));
-        fs.cpSync('assets', path.join('dist', 'assets'), { recursive: true });
+        copyFileSync('manifest.json', join('dist', 'manifest.json'));
+        mkdirSync(join('dist', 'options'), { recursive: true });
+        copyFileSync('src/options/options.html', join('dist', 'options', 'options.html'));
+        copyFileSync('src/options/options.css', join('dist', 'options', 'options.css'));
+        cpSync('assets', join('dist', 'assets'), { recursive: true });
       },
     },
   ],
