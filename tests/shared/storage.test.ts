@@ -15,6 +15,9 @@ describe('loadStoredData', () => {
     const data = await loadStoredData();
     expect(data.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(data.settings.sensitivity).toBe('medium');
+    expect(data.settings.customPatterns).toEqual([]);
+    expect(data.settings.theme).toBe('auto');
+    expect(data.dismissedPatterns).toEqual([]);
   });
 
   it('returns saved data when present', async () => {

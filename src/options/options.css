@@ -15,7 +15,7 @@ h2 { font-size: 16px; margin-bottom: 12px; color: #ccc; }
 
 section { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #2a2a3e; }
 
-.field { display: flex; gap: 8px; align-items: center; }
+.field { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
 input, select {
   background: #1a1a2e;
@@ -41,30 +41,75 @@ button {
 
 button:hover { background: #5558e6; }
 
+.btn-secondary {
+  background: #333;
+  color: #e0e0e0;
+}
+.btn-secondary:hover { background: #444; }
+
 .hint { font-size: 12px; color: #666; margin-top: 6px; }
 .hint a { color: #6366f1; }
 
 #key-status { font-size: 13px; margin-left: 8px; }
 
-.profile-item, .domain-item {
+.profile-item, .domain-item, .pattern-item, .persona-item {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 0;
 }
 
-.profile-item button, .domain-item button {
+.profile-item button, .domain-item button, .pattern-item button, .persona-item button {
   background: #333;
   font-size: 12px;
   padding: 4px 8px;
 }
 
-.add-profile, .add-domain {
+.add-profile, .add-domain, .add-pattern, .add-persona {
   display: flex;
   gap: 8px;
   margin-top: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 #stats { font-size: 14px; color: #aaa; }
 #stats div { margin-bottom: 4px; }
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.toggle-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #6366f1;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #1a1a2e;
+  font-size: 13px;
+}
+.history-date { color: #666; min-width: 140px; }
+.history-platform { color: #888; min-width: 70px; }
+.history-risk {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 55px;
+  text-align: center;
+}
+.history-risk-low { background: #e3f2fd; color: #1565c0; }
+.history-risk-medium { background: #fff3e0; color: #e65100; }
+.history-risk-high { background: #ffebee; color: #c62828; }
+.history-snippet { color: #aaa; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#history { max-height: 300px; overflow-y: auto; }

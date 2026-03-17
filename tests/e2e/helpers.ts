@@ -37,7 +37,9 @@ export async function getExtensionId(context: BrowserContext): Promise<string> {
 /**
  * Build a minimal HTML page that simulates a compose area for a given platform.
  */
-export function buildTestPage(platform: 'gmail' | 'linkedin' | 'twitter'): string {
+export function buildTestPage(
+  platform: 'gmail' | 'linkedin' | 'twitter' | 'slack' | 'discord',
+): string {
   const fixtures: Record<string, string> = {
     gmail: `
       <div class="nH">
@@ -65,6 +67,24 @@ export function buildTestPage(platform: 'gmail' | 'linkedin' | 'twitter'): strin
           </div>
         </div>
         <div data-testid="dmComposerSendButton" role="button" tabindex="0"><span>Send</span></div>
+      </div>`,
+    slack: `
+      <div class="p-workspace">
+        <div data-qa="message_input">
+          <div contenteditable="true" role="textbox" class="ql-editor"></div>
+        </div>
+        <div data-qa="texty_composer_button_bar">
+          <button data-qa="texty_send_button">Send</button>
+        </div>
+      </div>`,
+    discord: `
+      <div class="chat_content">
+        <div class="channelTextArea_xyz">
+          <div role="textbox" class="slateTextArea_abc" contenteditable="true"></div>
+        </div>
+        <div class="buttons_xyz">
+          <button>Send</button>
+        </div>
       </div>`,
   };
 

@@ -11,6 +11,7 @@ export async function loadStoredData(): Promise<StoredData> {
   let migrated = data;
   if (data.schemaVersion < CURRENT_SCHEMA_VERSION) {
     migrated = migrate(data);
+    await saveStoredData(migrated);
   }
 
   // Reset monthly API call counter if month has rolled over
@@ -29,8 +30,40 @@ export async function saveStoredData(data: StoredData): Promise<void> {
   await chrome.storage.local.set({ [STORAGE_KEY]: data });
 }
 
-function migrate(data: StoredData): StoredData {
-  // v1 is the only version — no migrations yet
-  // Future: if (data.schemaVersion < 2) { ... data.schemaVersion = 2; }
-  return { ...DEFAULT_STORED_DATA, ...data, schemaVersion: CURRENT_SCHEMA_VERSION };
+type MigrationFn = (data: StoredData) => StoredData;
+
+const migrations: Record<number, MigrationFn> = {
+  2: (data) => {
+    // v1 → v2: Add new settings fields, dismissedPatterns, recentFlags
+    data.settings = {
+      ...DEFAULT_STORED_DATA.settings,
+      ...data.settings,
+      customPatterns: data.settings.customPatterns ?? [],
+      theme: data.settings.theme ?? 'auto',
+      rewritePersonas: data.settings.rewritePersonas ?? [],
+      analyzeIncoming: data.settings.analyzeIncoming ?? false,
+    };
+    data.stats = {
+      ...data.stats,
+      recentFlags: data.stats.recentFlags ?? [],
+    };
+    data.dismissedPatterns = data.dismissedPatterns ?? [];
+    data.schemaVersion = 2;
+    return data;
+  },
+};
+
+export function migrate(data: StoredData): StoredData {
+  let current = { ...DEFAULT_STORED_DATA, ...data };
+
+  // Apply each migration in order
+  for (let v = current.schemaVersion + 1; v <= CURRENT_SCHEMA_VERSION; v++) {
+    const fn = migrations[v];
+    if (fn) {
+      current = fn(current);
+    }
+    current.schemaVersion = v;
+  }
+
+  return current;
 }

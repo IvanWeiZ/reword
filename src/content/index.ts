@@ -3,22 +3,35 @@ import type {
   AnalysisResult,
   MessageToBackground,
   MessageFromBackground,
+  Theme,
 } from '../shared/types';
-import { DEBOUNCE_MS, MIN_MESSAGE_LENGTH, HEURISTIC_THRESHOLD } from '../shared/constants';
+import {
+  DEBOUNCE_MS,
+  MIN_MESSAGE_LENGTH,
+  HEURISTIC_THRESHOLD,
+} from '../shared/constants';
 import { scoreMessage } from './heuristic-scorer';
 import { InputObserver } from './observer';
 import { TriggerIcon } from './trigger';
 import { PopupCard } from './popup-card';
-import { GmailAdapter } from '../adapters/gmail';
-import { LinkedInAdapter } from '../adapters/linkedin';
-import { TwitterAdapter } from '../adapters/twitter';
-import { GenericFallbackAdapter } from '../adapters/base';
+import { normalizeSnippet, deriveRecipientStyle } from './helpers';
+import { startIncomingAnalysis } from './incoming-analyzer';
+import {
+  GmailAdapter,
+  LinkedInAdapter,
+  TwitterAdapter,
+  SlackAdapter,
+  DiscordAdapter,
+  GenericFallbackAdapter,
+} from '../adapters';
 
 function detectAdapter(): PlatformAdapter {
   const host = window.location.hostname;
   if (host === 'mail.google.com') return new GmailAdapter();
   if (host === 'www.linkedin.com') return new LinkedInAdapter();
   if (host === 'x.com' || host === 'twitter.com') return new TwitterAdapter();
+  if (host.endsWith('.slack.com') || host === 'app.slack.com') return new SlackAdapter();
+  if (host === 'discord.com') return new DiscordAdapter();
   return new GenericFallbackAdapter();
 }
 
@@ -30,16 +43,29 @@ function init(): void {
   const adapter = detectAdapter();
   let currentResult: AnalysisResult | null = null;
   let currentText = '';
+  let previousText = '';
   let triggerCleanup: (() => void) | null = null;
   let generation = 0;
   let abortController: AbortController | null = null;
+  let customPatterns: string[] = [];
+  let theme: Theme = 'auto';
 
   const popup = new PopupCard({
     onRewrite: (text) => {
+      previousText = currentText;
       adapter.writeBack(text);
       sendMessage({ type: 'increment-stat', stat: 'rewritesAccepted' });
     },
-    onDismiss: () => {},
+    onDismiss: () => {
+      if (currentText) {
+        sendMessage({ type: 'record-dismiss', textSnippet: normalizeSnippet(currentText) });
+      }
+    },
+    onUndo: () => {
+      if (previousText) {
+        adapter.writeBack(previousText);
+      }
+    },
   });
 
   const trigger = new TriggerIcon(() => {
@@ -49,6 +75,20 @@ function init(): void {
   });
 
   document.body.appendChild(popup.element);
+
+  // Load settings to get custom patterns, theme, and personas
+  sendMessage({ type: 'get-settings' }).then((resp) => {
+    if (resp.type === 'settings') {
+      customPatterns = resp.data.settings.customPatterns;
+      theme = resp.data.settings.theme;
+      popup.setTheme(theme);
+
+      // Start incoming analysis if enabled (#14)
+      if (resp.data.settings.analyzeIncoming && adapter.getIncomingMessageElements) {
+        startIncomingAnalysis(adapter, resp.data.settings.theme);
+      }
+    }
+  });
 
   const observer = new InputObserver({
     debounceMs: DEBOUNCE_MS,
@@ -61,9 +101,21 @@ function init(): void {
       abortController = new AbortController();
       const signal = abortController.signal;
 
-      // Tier 0: local heuristic
-      const score = scoreMessage(text);
+      // Tier 0: local heuristic (with custom patterns #9)
+      const score = scoreMessage(text, customPatterns);
       if (score < HEURISTIC_THRESHOLD) {
+        trigger.hide();
+        currentResult = null;
+        return;
+      }
+
+      // Check if this pattern is suppressed (learning mode #6)
+      const suppressResp = await sendMessage({
+        type: 'check-suppressed',
+        textSnippet: normalizeSnippet(text),
+      });
+      if (signal.aborted || thisGeneration !== generation) return;
+      if (suppressResp.type === 'suppression-result' && suppressResp.suppressed) {
         trigger.hide();
         currentResult = null;
         return;
@@ -82,23 +134,46 @@ function init(): void {
       const settings = settingsResp.type === 'settings' ? settingsResp.data.settings : null;
 
       const threadContext = adapter.scrapeThreadContext();
+      const recipientStyle = deriveRecipientStyle(adapter);
 
-      // Send to background for analysis
+      // Show streaming indicator (#7)
+      popup.showStreaming();
+
+      // Send to background for analysis (with personas #13 and recipient style #8)
       const response = await sendMessage({
         type: 'analyze',
         text,
         context: threadContext,
         relationshipType: profile?.type ?? 'workplace',
-        sensitivity: settings?.sensitivity ?? 'medium',
+        sensitivity: profile?.sensitivity ?? settings?.sensitivity ?? 'medium',
+        personas:
+          settings?.rewritePersonas && settings.rewritePersonas.length > 0
+            ? settings.rewritePersonas
+            : undefined,
+        recipientStyle,
       });
 
       if (signal.aborted || thisGeneration !== generation) return;
+
+      popup.hide();
 
       if (response.type === 'analysis-result' && response.result.shouldFlag) {
         currentResult = response.result;
         trigger.show(response.result.riskLevel);
         if (triggerCleanup) triggerCleanup();
         triggerCleanup = adapter.placeTriggerIcon(trigger.element);
+
+        // Record flag event for history (#1)
+        sendMessage({
+          type: 'record-flag',
+          event: {
+            date: new Date().toISOString(),
+            platform: adapter.platformName,
+            riskLevel: response.result.riskLevel,
+            issues: response.result.issues,
+            textSnippet: text.slice(0, 80),
+          },
+        });
       } else {
         trigger.hide();
         currentResult = null;
@@ -113,7 +188,7 @@ function init(): void {
     domCheckTimer = setTimeout(() => {
       domCheckTimer = null;
       const input = adapter.findInputField();
-      if (input && input !== (observer as any)['element']) {
+      if (input && input !== observer.currentElement) {
         observer.observe(input);
       }
     }, 500);

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { launchWithExtension, buildTestPage } from './helpers';
-import type { BrowserContext, Page } from '@playwright/test';
+import type { BrowserContext } from '@playwright/test';
 
 let context: BrowserContext;
 
