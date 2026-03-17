@@ -26,14 +26,17 @@ function renderAll() {
 function renderProfiles() {
   const list = document.getElementById('profiles-list')!;
   list.innerHTML = Object.entries(data.relationshipProfiles)
-    .map(([domain, profile]) => `
+    .map(
+      ([domain, profile]) => `
       <div class="profile-item">
         <span><strong>${esc(domain)}</strong> — ${esc(profile.type)} (${esc(profile.label)})</span>
         <button data-remove-profile="${esc(domain)}">Remove</button>
       </div>
-    `).join('');
+    `,
+    )
+    .join('');
 
-  list.querySelectorAll<HTMLElement>('[data-remove-profile]').forEach(btn => {
+  list.querySelectorAll<HTMLElement>('[data-remove-profile]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const domain = btn.dataset.removeProfile!;
       delete data.relationshipProfiles[domain];
@@ -46,17 +49,20 @@ function renderProfiles() {
 function renderDomains() {
   const list = document.getElementById('domains-list')!;
   list.innerHTML = data.settings.enabledDomains
-    .map(d => `
+    .map(
+      (d) => `
       <div class="domain-item">
         <span>${esc(d)}</span>
         <button data-remove-domain="${esc(d)}">Remove</button>
       </div>
-    `).join('');
+    `,
+    )
+    .join('');
 
-  list.querySelectorAll<HTMLElement>('[data-remove-domain]').forEach(btn => {
+  list.querySelectorAll<HTMLElement>('[data-remove-domain]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const domain = btn.dataset.removeDomain!;
-      data.settings.enabledDomains = data.settings.enabledDomains.filter(d => d !== domain);
+      data.settings.enabledDomains = data.settings.enabledDomains.filter((d) => d !== domain);
       await saveStoredData(data);
       renderDomains();
     });
@@ -102,13 +108,15 @@ function bindEvents() {
   });
 
   document.getElementById('sensitivity')!.addEventListener('change', async (e) => {
-    data.settings.sensitivity = (e.target as HTMLSelectElement).value as StoredData['settings']['sensitivity'];
+    data.settings.sensitivity = (e.target as HTMLSelectElement)
+      .value as StoredData['settings']['sensitivity'];
     await saveStoredData(data);
   });
 
   document.getElementById('add-profile')!.addEventListener('click', async () => {
     const domain = (document.getElementById('new-profile-domain') as HTMLInputElement).value.trim();
-    const type = (document.getElementById('new-profile-type') as HTMLSelectElement).value as RelationshipType;
+    const type = (document.getElementById('new-profile-type') as HTMLSelectElement)
+      .value as RelationshipType;
     const label = (document.getElementById('new-profile-label') as HTMLInputElement).value.trim();
     if (!domain) return;
 

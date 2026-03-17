@@ -3,7 +3,7 @@ import type { PlatformAdapter, ThreadMessage } from '../shared/types';
 export class LinkedInAdapter implements PlatformAdapter {
   findInputField(): HTMLElement | null {
     return document.querySelector<HTMLElement>(
-      '.msg-form__msg-content-container--scrollable[role="textbox"]'
+      '.msg-form__msg-content-container--scrollable[role="textbox"]',
     );
   }
 

@@ -58,12 +58,16 @@ export class PopupCard {
       </div>
       <div class="reword-explanation">${this.esc(result.issues.join('. '))}</div>
       <div class="reword-rewrites">
-        ${result.rewrites.map((r, i) => `
+        ${result.rewrites
+          .map(
+            (r, i) => `
           <div class="reword-rewrite-option" data-index="${i}">
             <div class="reword-rewrite-label">${this.esc(r.label)}</div>
             <div>${this.esc(r.text)}</div>
           </div>
-        `).join('')}
+        `,
+          )
+          .join('')}
       </div>
       <div class="reword-actions">
         <button class="reword-send-original">Send original</button>
@@ -71,7 +75,7 @@ export class PopupCard {
       </div>
     `;
 
-    this.element.querySelectorAll<HTMLElement>('.reword-rewrite-option').forEach(el => {
+    this.element.querySelectorAll<HTMLElement>('.reword-rewrite-option').forEach((el) => {
       el.addEventListener('click', () => {
         const i = parseInt(el.dataset.index ?? '0', 10);
         this.options.onRewrite(result.rewrites[i].text);

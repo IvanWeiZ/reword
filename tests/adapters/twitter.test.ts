@@ -7,7 +7,10 @@ describe('TwitterAdapter', () => {
   let adapter: TwitterAdapter;
 
   beforeEach(() => {
-    const html = readFileSync(resolve(__dirname, '../mocks/mock-dom-fixtures/twitter-dm.html'), 'utf-8');
+    const html = readFileSync(
+      resolve(__dirname, '../mocks/mock-dom-fixtures/twitter-dm.html'),
+      'utf-8',
+    );
     document.body.innerHTML = html;
     adapter = new TwitterAdapter();
   });

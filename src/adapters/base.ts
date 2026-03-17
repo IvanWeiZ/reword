@@ -4,9 +4,7 @@ export type { PlatformAdapter };
 
 export class GenericFallbackAdapter implements PlatformAdapter {
   findInputField(): HTMLElement | null {
-    const editables = document.querySelectorAll<HTMLElement>(
-      '[contenteditable="true"], textarea'
-    );
+    const editables = document.querySelectorAll<HTMLElement>('[contenteditable="true"], textarea');
     let best: HTMLElement | null = null;
     let bestArea = 0;
     for (const el of editables) {

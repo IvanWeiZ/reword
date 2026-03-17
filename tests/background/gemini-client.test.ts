@@ -21,7 +21,8 @@ describe('parseAnalysisResponse', () => {
   });
 
   it('handles JSON wrapped in markdown code fences', () => {
-    const json = '```json\n{"should_flag": false, "risk_level": "low", "issues": [], "explanation": "", "rewrites": []}\n```';
+    const json =
+      '```json\n{"should_flag": false, "risk_level": "low", "issues": [], "explanation": "", "rewrites": []}\n```';
     const result = parseAnalysisResponse(json);
     expect(result.shouldFlag).toBe(false);
   });

@@ -75,7 +75,13 @@ export interface PlatformAdapter {
 // --- Message passing between content script and service worker ---
 
 export type MessageToBackground =
-  | { type: 'analyze'; text: string; context: ThreadMessage[]; relationshipType: RelationshipType; sensitivity: Sensitivity }
+  | {
+      type: 'analyze';
+      text: string;
+      context: ThreadMessage[];
+      relationshipType: RelationshipType;
+      sensitivity: Sensitivity;
+    }
   | { type: 'get-settings' }
   | { type: 'get-profile'; domain: string }
   | { type: 'increment-stat'; stat: keyof Stats };

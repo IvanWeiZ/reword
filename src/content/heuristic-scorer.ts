@@ -13,9 +13,19 @@ const PASSIVE_AGGRESSIVE_PATTERNS = [
 ];
 
 const NEGATIVE_KEYWORDS = [
-  'stupid', 'idiot', 'hate', 'annoying', 'useless',
-  'pathetic', 'ridiculous', 'disgusting', 'terrible', 'awful',
-  'never mind', 'forget it', "don't bother",
+  'stupid',
+  'idiot',
+  'hate',
+  'annoying',
+  'useless',
+  'pathetic',
+  'ridiculous',
+  'disgusting',
+  'terrible',
+  'awful',
+  'never mind',
+  'forget it',
+  "don't bother",
 ];
 
 /**
@@ -45,7 +55,7 @@ export function scoreMessage(text: string): number {
   // ALL CAPS detection (check if >50% of alpha chars are uppercase)
   const alphaChars = text.replace(/[^a-zA-Z]/g, '');
   if (alphaChars.length >= 10) {
-    const upperRatio = (text.replace(/[^A-Z]/g, '').length) / alphaChars.length;
+    const upperRatio = text.replace(/[^A-Z]/g, '').length / alphaChars.length;
     if (upperRatio > 0.5) {
       score += 0.3;
     }

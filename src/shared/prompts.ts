@@ -16,7 +16,8 @@ Rewrites should de-escalate, validate feelings, and set boundaries kindly while 
 
 const SENSITIVITY_INSTRUCTIONS: Record<Sensitivity, string> = {
   low: 'Only flag messages that are clearly hostile, insulting, or very likely to cause a fight. Borderline cases should pass.',
-  medium: 'Flag messages that could reasonably be misread or that contain subtle negative tone. Use your best judgment.',
+  medium:
+    'Flag messages that could reasonably be misread or that contain subtle negative tone. Use your best judgment.',
   high: 'Flag anything that could possibly be taken the wrong way, even if the intent seems harmless. Better safe than sorry.',
 };
 
@@ -26,9 +27,10 @@ export function buildAnalysisPrompt(
   sensitivity: Sensitivity,
   threadContext: ThreadMessage[],
 ): string {
-  const contextBlock = threadContext.length > 0
-    ? `\n\nRecent conversation for context:\n${threadContext.map(m => `[${m.sender}]: ${m.text}`).join('\n')}`
-    : '';
+  const contextBlock =
+    threadContext.length > 0
+      ? `\n\nRecent conversation for context:\n${threadContext.map((m) => `[${m.sender}]: ${m.text}`).join('\n')}`
+      : '';
 
   return `You are Reword, an AI that helps people communicate better. Analyze the following draft message and decide if it should be flagged for tone issues.
 

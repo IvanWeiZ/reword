@@ -58,7 +58,14 @@ export class GeminiClient {
     threadContext: ThreadMessage[],
     signal?: AbortSignal,
   ): Promise<AnalysisResult> {
-    return this.analyzeStreaming(message, relationshipType, sensitivity, threadContext, () => {}, signal);
+    return this.analyzeStreaming(
+      message,
+      relationshipType,
+      sensitivity,
+      threadContext,
+      () => {},
+      signal,
+    );
   }
 
   async validateApiKey(apiKey: string): Promise<boolean> {
@@ -108,7 +115,7 @@ export function parseAnalysisResponse(text: string): AnalysisResult {
     riskLevel: parsed.risk_level as AnalysisResult['riskLevel'],
     issues: parsed.issues as string[],
     explanation: parsed.explanation as string,
-    rewrites: (parsed.rewrites as Array<{ label: string; text: string }>).map(r => ({
+    rewrites: (parsed.rewrites as Array<{ label: string; text: string }>).map((r) => ({
       label: r.label,
       text: r.text,
     })),

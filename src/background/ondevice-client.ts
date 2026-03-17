@@ -22,9 +22,12 @@ export class OnDeviceClient {
     try {
       const ai = (globalThis as any).ai;
       const session = await ai.languageModel.create({
-        systemPrompt: 'You analyze message tone. Respond with ONLY a JSON object: {"problematic": true/false, "confidence": 0.0-1.0}',
+        systemPrompt:
+          'You analyze message tone. Respond with ONLY a JSON object: {"problematic": true/false, "confidence": 0.0-1.0}',
       });
-      const response = await session.prompt(`Is this message potentially problematic in tone? "${text}"`);
+      const response = await session.prompt(
+        `Is this message potentially problematic in tone? "${text}"`,
+      );
       session.destroy();
 
       const parsed = JSON.parse(response);

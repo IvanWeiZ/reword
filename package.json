@@ -11,7 +11,11 @@
     "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix",
+    "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts'"
   },
   "keywords": [],
   "author": "",
@@ -21,13 +25,19 @@
     "@google/generative-ai": "^0.24.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.58.2",
     "@types/chrome": "^0.1.38",
     "@vitest/browser": "^4.1.0",
     "@vitest/coverage-v8": "^4.1.0",
     "@vitest/ui": "^4.1.0",
+    "eslint": "^10.0.3",
+    "eslint-config-prettier": "^10.1.8",
     "jsdom": "^29.0.0",
     "playwright": "^1.58.2",
+    "prettier": "^3.8.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.1",
     "vite": "^8.0.0",
     "vitest": "^4.1.0"
   }

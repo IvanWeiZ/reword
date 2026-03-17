@@ -26,7 +26,8 @@ export class TriggerIcon {
     this.element.style.alignItems = 'center';
     this.element.style.gap = '6px';
     this.element.style.zIndex = '10000';
-    this.element.innerHTML = '<span class="reword-dot" style="width:8px;height:8px;border-radius:50%;display:inline-block;"></span><span>Review tone</span>';
+    this.element.innerHTML =
+      '<span class="reword-dot" style="width:8px;height:8px;border-radius:50%;display:inline-block;"></span><span>Review tone</span>';
     this.element.addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();

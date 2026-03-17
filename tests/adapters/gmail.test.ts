@@ -7,7 +7,10 @@ describe('GmailAdapter', () => {
   let adapter: GmailAdapter;
 
   beforeEach(() => {
-    const html = readFileSync(resolve(__dirname, '../mocks/mock-dom-fixtures/gmail-compose.html'), 'utf-8');
+    const html = readFileSync(
+      resolve(__dirname, '../mocks/mock-dom-fixtures/gmail-compose.html'),
+      'utf-8',
+    );
     document.body.innerHTML = html;
     // jsdom does not implement execCommand; stub it so writeBack tests work
     document.execCommand = () => false;
