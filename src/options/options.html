@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reword Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Reword Settings</h1>
+
+    <section>
+      <h2>Gemini API Key</h2>
+      <div class="field">
+        <input type="password" id="api-key" placeholder="Enter your Gemini API key">
+        <button id="validate-key">Validate</button>
+        <span id="key-status"></span>
+      </div>
+      <p class="hint">Get a free API key at <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a></p>
+    </section>
+
+    <section>
+      <h2>Sensitivity</h2>
+      <select id="sensitivity">
+        <option value="low">Low — only flag clearly hostile messages</option>
+        <option value="medium" selected>Medium — flag messages that could be misread</option>
+        <option value="high">High — flag anything that could be taken wrong</option>
+      </select>
+    </section>
+
+    <section>
+      <h2>Relationship Profiles</h2>
+      <div id="profiles-list"></div>
+      <div class="add-profile">
+        <input type="text" id="new-profile-domain" placeholder="Domain or contact (e.g. linkedin.com)">
+        <select id="new-profile-type">
+          <option value="romantic">Romantic</option>
+          <option value="workplace">Workplace</option>
+          <option value="family">Family</option>
+        </select>
+        <input type="text" id="new-profile-label" placeholder="Label (e.g. partner, boss)">
+        <button id="add-profile">Add</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Custom Domains</h2>
+      <p class="hint">Enable Reword on additional websites beyond Gmail, LinkedIn, and Twitter.</p>
+      <div id="domains-list"></div>
+      <div class="add-domain">
+        <input type="text" id="new-domain" placeholder="e.g. slack.com">
+        <button id="add-domain">Add</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Usage Stats</h2>
+      <div id="stats"></div>
+    </section>
+  </div>
+  <script src="../options.js"></script>
+</body>
+</html>

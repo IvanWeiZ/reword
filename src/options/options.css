@@ -1,0 +1,70 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #0f0f1a;
+  color: #e0e0e0;
+  padding: 40px;
+  line-height: 1.6;
+}
+
+.container { max-width: 640px; margin: 0 auto; }
+
+h1 { font-size: 24px; margin-bottom: 32px; color: #fff; }
+h2 { font-size: 16px; margin-bottom: 12px; color: #ccc; }
+
+section { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #2a2a3e; }
+
+.field { display: flex; gap: 8px; align-items: center; }
+
+input, select {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  color: #e0e0e0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+input:focus, select:focus { outline: none; border-color: #6366f1; }
+input[type="text"], input[type="password"] { flex: 1; }
+
+button {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button:hover { background: #5558e6; }
+
+.hint { font-size: 12px; color: #666; margin-top: 6px; }
+.hint a { color: #6366f1; }
+
+#key-status { font-size: 13px; margin-left: 8px; }
+
+.profile-item, .domain-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.profile-item button, .domain-item button {
+  background: #333;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.add-profile, .add-domain {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  align-items: center;
+}
+
+#stats { font-size: 14px; color: #aaa; }
+#stats div { margin-bottom: 4px; }
