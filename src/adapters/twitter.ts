@@ -2,6 +2,7 @@ import type { PlatformAdapter, ThreadMessage } from '../shared/types';
 import { selectAllContent, insertText } from './base';
 
 export class TwitterAdapter implements PlatformAdapter {
+  platformName = 'twitter';
   findInputField(): HTMLElement | null {
     return document.querySelector<HTMLElement>('[data-testid="dmComposerTextInput"]');
   }
@@ -42,5 +43,20 @@ export class TwitterAdapter implements PlatformAdapter {
       messages.push({ sender: 'other', text: text.slice(0, 500) });
     }
     return messages.slice(-10);
+  }
+
+  getIncomingMessageElements(): HTMLElement[] {
+    return Array.from(document.querySelectorAll<HTMLElement>('[data-testid="messageEntry"]')).slice(
+      -5,
+    );
+  }
+
+  placeIncomingIndicator(messageEl: HTMLElement, indicator: HTMLElement): (() => void) | null {
+    const tweetText = messageEl.querySelector('[data-testid="tweetText"]');
+    if (!tweetText) return null;
+    indicator.style.display = 'inline-flex';
+    indicator.style.marginLeft = '6px';
+    tweetText.appendChild(indicator);
+    return () => indicator.remove();
   }
 }

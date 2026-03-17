@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Reword",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Flag problematic messages and suggest kinder rewrites before you send them.",
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
@@ -9,6 +9,8 @@
     "https://www.linkedin.com/*",
     "https://x.com/*",
     "https://twitter.com/*",
+    "https://*.slack.com/*",
+    "https://discord.com/*",
     "https://generativelanguage.googleapis.com/*"
   ],
   "background": {
@@ -21,7 +23,9 @@
         "https://mail.google.com/*",
         "https://www.linkedin.com/*",
         "https://x.com/*",
-        "https://twitter.com/*"
+        "https://twitter.com/*",
+        "https://*.slack.com/*",
+        "https://discord.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

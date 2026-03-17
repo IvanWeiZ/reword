@@ -45,4 +45,29 @@ describe('scoreMessage', () => {
     expect(score).toBeGreaterThanOrEqual(0);
     expect(score).toBeLessThanOrEqual(1);
   });
+
+  // Feature #9: custom patterns
+  it('flags messages matching custom patterns (#9)', () => {
+    const customPatterns = ['\\bwhy would you\\b'];
+    const score = scoreMessage('why would you do that', customPatterns);
+    expect(score).toBeGreaterThanOrEqual(0.3);
+  });
+
+  it('does not flag when custom patterns do not match (#9)', () => {
+    const customPatterns = ['\\bxyz123\\b'];
+    const score = scoreMessage('hello there', customPatterns);
+    expect(score).toBeLessThan(0.3);
+  });
+
+  it('ignores invalid regex in custom patterns (#9)', () => {
+    const customPatterns = ['[invalid'];
+    // Should not throw, just skip the invalid pattern
+    const score = scoreMessage('hello there', customPatterns);
+    expect(score).toBeLessThan(0.3);
+  });
+
+  it('works with empty custom patterns array (#9)', () => {
+    const score = scoreMessage('whatever', []);
+    expect(score).toBeGreaterThanOrEqual(0.3);
+  });
 });

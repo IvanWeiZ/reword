@@ -1,6 +1,13 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { AnalysisResult, RelationshipType, Sensitivity, ThreadMessage } from '../shared/types';
-import { buildAnalysisPrompt } from '../shared/prompts';
+import type {
+  AnalysisResult,
+  IncomingAnalysis,
+  RelationshipType,
+  RewritePersona,
+  Sensitivity,
+  ThreadMessage,
+} from '../shared/types';
+import { buildAnalysisPrompt, buildIncomingAnalysisPrompt } from '../shared/prompts';
 import { API_TIMEOUT_MS } from '../shared/constants';
 
 export type StreamCallback = (partialText: string) => void;
@@ -25,6 +32,7 @@ export class GeminiClient {
     threadContext: ThreadMessage[],
     onStream: StreamCallback,
     signal?: AbortSignal,
+    options?: { personas?: RewritePersona[]; recipientStyle?: string },
   ): Promise<AnalysisResult> {
     if (!this.client) throw new Error('Gemini client not configured');
 
@@ -35,7 +43,10 @@ export class GeminiClient {
       },
     });
 
-    const prompt = buildAnalysisPrompt(message, relationshipType, sensitivity, threadContext);
+    const prompt = buildAnalysisPrompt(message, relationshipType, sensitivity, threadContext, {
+      personas: options?.personas,
+      recipientStyle: options?.recipientStyle,
+    });
 
     const streamResult = await model.generateContentStream({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -67,7 +78,7 @@ export class GeminiClient {
     relationshipType: RelationshipType,
     sensitivity: Sensitivity,
     threadContext: ThreadMessage[],
-    signal?: AbortSignal,
+    options?: { personas?: RewritePersona[]; recipientStyle?: string },
   ): Promise<AnalysisResult> {
     return this.analyzeStreaming(
       message,
@@ -75,8 +86,31 @@ export class GeminiClient {
       sensitivity,
       threadContext,
       () => {},
-      signal,
+      undefined,
+      options,
     );
+  }
+
+  async analyzeIncoming(
+    message: string,
+    threadContext: ThreadMessage[],
+  ): Promise<IncomingAnalysis> {
+    if (!this.client) throw new Error('Gemini client not configured');
+
+    const model = this.client.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const prompt = buildIncomingAnalysisPrompt(message, threadContext);
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+
+    const text = result.response.text();
+    return parseIncomingAnalysisResponse(text);
   }
 
   async validateApiKey(apiKey: string): Promise<boolean> {
@@ -131,5 +165,30 @@ export function parseAnalysisResponse(text: string): AnalysisResult {
       label: r.label,
       text: r.text,
     })),
+  };
+}
+
+export function parseIncomingAnalysisResponse(text: string): IncomingAnalysis {
+  let cleaned = text.trim();
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+  }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    throw new Error(`Failed to parse incoming analysis response: ${cleaned.slice(0, 100)}`);
+  }
+
+  return {
+    riskLevel: (['low', 'medium', 'high'].includes(parsed.risk_level as string)
+      ? parsed.risk_level
+      : 'low') as IncomingAnalysis['riskLevel'],
+    issues: Array.isArray(parsed.issues) ? (parsed.issues as string[]) : [],
+    interpretation:
+      typeof parsed.interpretation === 'string'
+        ? (parsed.interpretation as string)
+        : 'Unable to interpret this message.',
   };
 }

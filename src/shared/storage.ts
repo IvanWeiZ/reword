@@ -33,8 +33,24 @@ export async function saveStoredData(data: StoredData): Promise<void> {
 type MigrationFn = (data: StoredData) => StoredData;
 
 const migrations: Record<number, MigrationFn> = {
-  // Example: when schema v2 is needed, add:
-  // 2: (data) => { data.newField = defaultValue; data.schemaVersion = 2; return data; },
+  2: (data) => {
+    // v1 → v2: Add new settings fields, dismissedPatterns, recentFlags
+    data.settings = {
+      ...DEFAULT_STORED_DATA.settings,
+      ...data.settings,
+      customPatterns: data.settings.customPatterns ?? [],
+      theme: data.settings.theme ?? 'auto',
+      rewritePersonas: data.settings.rewritePersonas ?? [],
+      analyzeIncoming: data.settings.analyzeIncoming ?? false,
+    };
+    data.stats = {
+      ...data.stats,
+      recentFlags: data.stats.recentFlags ?? [],
+    };
+    data.dismissedPatterns = data.dismissedPatterns ?? [];
+    data.schemaVersion = 2;
+    return data;
+  },
 };
 
 export function migrate(data: StoredData): StoredData {

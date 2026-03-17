@@ -31,14 +31,17 @@ const NEGATIVE_KEYWORDS = [
 /**
  * Scores a message from 0 (clean) to 1 (very problematic).
  * Runs synchronously in < 5ms.
+ *
+ * @param customPatterns Optional user-defined regex strings from settings.
  */
-export function scoreMessage(text: string): number {
+export function scoreMessage(text: string, customPatterns: string[] = []): number {
   if (!text || text.trim().length === 0) return 0;
 
   let patternScore = 0;
   let keywordScore = 0;
   let capsScore = 0;
   let punctuationScore = 0;
+  let customScore = 0;
   const lower = text.toLowerCase();
 
   // Check passive-aggressive patterns (high signal) — cap at one match worth
@@ -78,5 +81,24 @@ export function scoreMessage(text: string): number {
     punctuationScore = Math.min(0.4, 0.3 * excessivePunctuation.length);
   }
 
-  return Math.min(1, Math.max(0, patternScore + keywordScore + capsScore + punctuationScore));
+  // User-defined custom patterns (#9)
+  if (customPatterns.length > 0) {
+    let customMatches = 0;
+    for (const patStr of customPatterns) {
+      try {
+        const re = new RegExp(patStr, 'i');
+        if (re.test(text)) customMatches++;
+      } catch {
+        // Skip invalid patterns
+      }
+    }
+    if (customMatches > 0) {
+      customScore = Math.min(0.4, 0.3 * customMatches);
+    }
+  }
+
+  return Math.min(
+    1,
+    Math.max(0, patternScore + keywordScore + capsScore + punctuationScore + customScore),
+  );
 }

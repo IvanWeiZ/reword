@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAnalysisPrompt } from '../../src/shared/prompts';
+import { buildAnalysisPrompt, buildIncomingAnalysisPrompt } from '../../src/shared/prompts';
 
 describe('buildAnalysisPrompt', () => {
   it('includes the user message text', () => {
@@ -52,5 +52,43 @@ describe('buildAnalysisPrompt', () => {
     expect(prompt).toContain('"should_flag"');
     expect(prompt).toContain('"risk_level"');
     expect(prompt).toContain('"rewrites"');
+  });
+
+  it('includes custom personas when provided (#13)', () => {
+    const personas = [
+      { label: 'Friendly', instruction: 'Reply like a close friend' },
+      { label: 'Formal', instruction: 'Reply with corporate formality' },
+    ];
+    const prompt = buildAnalysisPrompt('test', 'workplace', 'medium', [], { personas });
+    expect(prompt).toContain('Friendly');
+    expect(prompt).toContain('Reply like a close friend');
+    expect(prompt).toContain('exactly 2 rewrites');
+  });
+
+  it('includes recipient style when provided (#8)', () => {
+    const prompt = buildAnalysisPrompt('test', 'workplace', 'medium', [], {
+      recipientStyle: 'brief, uses emojis',
+    });
+    expect(prompt).toContain('brief, uses emojis');
+    expect(prompt).toContain("recipient's communication style");
+  });
+});
+
+describe('buildIncomingAnalysisPrompt (#14)', () => {
+  it('includes the received message', () => {
+    const prompt = buildIncomingAnalysisPrompt('Whatever.', []);
+    expect(prompt).toContain('Whatever.');
+  });
+
+  it('includes thread context', () => {
+    const context = [{ sender: 'self' as const, text: 'How are you?' }];
+    const prompt = buildIncomingAnalysisPrompt('Fine.', context);
+    expect(prompt).toContain('[self]: How are you?');
+  });
+
+  it('requests JSON with interpretation field', () => {
+    const prompt = buildIncomingAnalysisPrompt('test', []);
+    expect(prompt).toContain('"interpretation"');
+    expect(prompt).toContain('"risk_level"');
   });
 });

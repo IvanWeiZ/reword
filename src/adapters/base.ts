@@ -33,6 +33,7 @@ export function insertText(element: HTMLElement, text: string): void {
 }
 
 export class GenericFallbackAdapter implements PlatformAdapter {
+  platformName = 'generic';
   findInputField(): HTMLElement | null {
     const editables = document.querySelectorAll<HTMLElement>('[contenteditable="true"], textarea');
     let best: HTMLElement | null = null;

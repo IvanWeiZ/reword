@@ -2,6 +2,7 @@ import type { PlatformAdapter, ThreadMessage } from '../shared/types';
 import { selectAllContent, insertText } from './base';
 
 export class LinkedInAdapter implements PlatformAdapter {
+  platformName = 'linkedin';
   findInputField(): HTMLElement | null {
     return document.querySelector<HTMLElement>(
       '.msg-form__msg-content-container--scrollable[role="textbox"]',
@@ -45,5 +46,25 @@ export class LinkedInAdapter implements PlatformAdapter {
       messages.push({ sender: isSelf as 'self' | 'other', text: text.slice(0, 500) });
     }
     return messages.slice(-10);
+  }
+
+  getIncomingMessageElements(): HTMLElement[] {
+    const els: HTMLElement[] = [];
+    const messageEls = document.querySelectorAll<HTMLElement>('.msg-s-event-listitem');
+    for (const el of messageEls) {
+      if (el.classList.contains('msg-s-event-listitem--other')) {
+        els.push(el);
+      }
+    }
+    return els.slice(-5);
+  }
+
+  placeIncomingIndicator(messageEl: HTMLElement, indicator: HTMLElement): (() => void) | null {
+    const body = messageEl.querySelector('.msg-s-event-listitem__body');
+    if (!body) return null;
+    indicator.style.display = 'inline-flex';
+    indicator.style.marginLeft = '6px';
+    body.appendChild(indicator);
+    return () => indicator.remove();
   }
 }

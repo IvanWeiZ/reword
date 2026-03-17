@@ -36,6 +36,7 @@ describe('migrate', () => {
       settings: { geminiApiKey: '', sensitivity: 'low' as const, enabledDomains: [] },
       relationshipProfiles: {},
       stats: DEFAULT_STORED_DATA.stats,
+      dismissedPatterns: [],
     };
     const result = migrate(partialData);
     expect(result.stats).toBeDefined();
@@ -45,5 +46,35 @@ describe('migrate', () => {
   it('handles data already at current version', () => {
     const result = migrate({ ...DEFAULT_STORED_DATA });
     expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+  });
+
+  it('v1 to v2 migration adds new settings fields', () => {
+    const v1Data = {
+      schemaVersion: 1,
+      settings: {
+        geminiApiKey: 'test-key',
+        sensitivity: 'medium' as const,
+        enabledDomains: ['example.com'],
+      },
+      relationshipProfiles: {},
+      stats: {
+        totalAnalyzed: 5,
+        totalFlagged: 2,
+        rewritesAccepted: 1,
+        monthlyApiCalls: 3,
+        monthlyApiCallsResetDate: '2026-01-01',
+      },
+      dismissedPatterns: [],
+    };
+    const result = migrate(v1Data);
+    expect(result.schemaVersion).toBe(2);
+    expect(result.settings.customPatterns).toEqual([]);
+    expect(result.settings.theme).toBe('auto');
+    expect(result.settings.rewritePersonas).toEqual([]);
+    expect(result.settings.analyzeIncoming).toBe(false);
+    expect(result.stats.recentFlags).toEqual([]);
+    // Preserved existing data
+    expect(result.settings.geminiApiKey).toBe('test-key');
+    expect(result.stats.totalAnalyzed).toBe(5);
   });
 });

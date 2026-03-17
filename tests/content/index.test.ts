@@ -1,41 +1,65 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// We can't directly test the IIFE in index.ts, but we can test detectAdapter logic
-// by verifying the adapter pattern. We import the adapters to test detection logic.
+// We import the adapters to test detection logic and new platform support
 import { GmailAdapter } from '../../src/adapters/gmail';
 import { LinkedInAdapter } from '../../src/adapters/linkedin';
 import { TwitterAdapter } from '../../src/adapters/twitter';
+import { SlackAdapter } from '../../src/adapters/slack';
+import { DiscordAdapter } from '../../src/adapters/discord';
 import { GenericFallbackAdapter } from '../../src/adapters/base';
 
-describe('detectAdapter (adapter selection by hostname)', () => {
-  it('GmailAdapter targets mail.google.com', () => {
-    const adapter = new GmailAdapter();
-    expect(adapter).toBeInstanceOf(GmailAdapter);
-    expect(adapter.findInputField).toBeDefined();
-    expect(adapter.placeTriggerIcon).toBeDefined();
-    expect(adapter.writeBack).toBeDefined();
-    expect(adapter.scrapeThreadContext).toBeDefined();
-    expect(adapter.checkHealth).toBeDefined();
+describe('adapter platform names', () => {
+  it('GmailAdapter has platformName "gmail"', () => {
+    expect(new GmailAdapter().platformName).toBe('gmail');
   });
 
-  it('LinkedInAdapter targets www.linkedin.com', () => {
-    const adapter = new LinkedInAdapter();
-    expect(adapter).toBeInstanceOf(LinkedInAdapter);
+  it('LinkedInAdapter has platformName "linkedin"', () => {
+    expect(new LinkedInAdapter().platformName).toBe('linkedin');
   });
 
-  it('TwitterAdapter targets x.com and twitter.com', () => {
-    const adapter = new TwitterAdapter();
-    expect(adapter).toBeInstanceOf(TwitterAdapter);
+  it('TwitterAdapter has platformName "twitter"', () => {
+    expect(new TwitterAdapter().platformName).toBe('twitter');
   });
 
-  it('GenericFallbackAdapter is used for unknown hosts', () => {
-    const adapter = new GenericFallbackAdapter();
-    expect(adapter).toBeInstanceOf(GenericFallbackAdapter);
+  it('SlackAdapter has platformName "slack"', () => {
+    expect(new SlackAdapter().platformName).toBe('slack');
+  });
+
+  it('DiscordAdapter has platformName "discord"', () => {
+    expect(new DiscordAdapter().platformName).toBe('discord');
+  });
+
+  it('GenericFallbackAdapter has platformName "generic"', () => {
+    expect(new GenericFallbackAdapter().platformName).toBe('generic');
   });
 });
 
-describe('InputObserver integration with content script', () => {
-  it('InputObserver exposes currentElement getter', async () => {
+describe('adapter interface compliance', () => {
+  const adapters = [
+    new GmailAdapter(),
+    new LinkedInAdapter(),
+    new TwitterAdapter(),
+    new SlackAdapter(),
+    new DiscordAdapter(),
+    new GenericFallbackAdapter(),
+  ];
+
+  for (const adapter of adapters) {
+    describe(adapter.platformName, () => {
+      it('implements all required PlatformAdapter methods', () => {
+        expect(adapter.findInputField).toBeDefined();
+        expect(adapter.placeTriggerIcon).toBeDefined();
+        expect(adapter.writeBack).toBeDefined();
+        expect(adapter.scrapeThreadContext).toBeDefined();
+        expect(adapter.checkHealth).toBeDefined();
+        expect(typeof adapter.platformName).toBe('string');
+      });
+    });
+  }
+});
+
+describe('InputObserver.currentElement getter', () => {
+  it('exposes currentElement and updates on observe/disconnect', async () => {
     const { InputObserver } = await import('../../src/content/observer');
     const onAnalyze = vi.fn();
     const observer = new InputObserver({ debounceMs: 100, minLength: 5, onAnalyze });
@@ -45,7 +69,6 @@ describe('InputObserver integration with content script', () => {
     const textarea = document.createElement('textarea');
     document.body.appendChild(textarea);
     observer.observe(textarea);
-
     expect(observer.currentElement).toBe(textarea);
 
     observer.disconnect();
