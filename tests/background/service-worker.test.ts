@@ -31,8 +31,8 @@ describe('handleMessage', () => {
     const dataWithProfile = {
       ...DEFAULT_STORED_DATA,
       relationshipProfiles: {
-        'mail.google.com': { type: 'romantic' as const, label: 'partner' }
-      }
+        'mail.google.com': { type: 'romantic' as const, label: 'partner' },
+      },
     };
     await mockStorage.local.set({ reword: dataWithProfile });
     const result = await handleMessage({ type: 'get-profile', domain: 'mail.google.com' });

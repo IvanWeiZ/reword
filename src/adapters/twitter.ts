@@ -2,9 +2,7 @@ import type { PlatformAdapter, ThreadMessage } from '../shared/types';
 
 export class TwitterAdapter implements PlatformAdapter {
   findInputField(): HTMLElement | null {
-    return document.querySelector<HTMLElement>(
-      '[data-testid="dmComposerTextInput"]'
-    );
+    return document.querySelector<HTMLElement>('[data-testid="dmComposerTextInput"]');
   }
 
   placeTriggerIcon(icon: HTMLElement): (() => void) | null {

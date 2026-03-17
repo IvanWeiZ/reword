@@ -2,9 +2,7 @@ import type { PlatformAdapter, ThreadMessage } from '../shared/types';
 
 export class GmailAdapter implements PlatformAdapter {
   findInputField(): HTMLElement | null {
-    return document.querySelector<HTMLElement>(
-      'div[role="textbox"][g_editable="true"]'
-    );
+    return document.querySelector<HTMLElement>('div[role="textbox"][g_editable="true"]');
   }
 
   placeTriggerIcon(icon: HTMLElement): (() => void) | null {
@@ -35,7 +33,8 @@ export class GmailAdapter implements PlatformAdapter {
       const container = el.closest('.adn');
       const senderEl = container?.querySelector('.gD');
       const senderName = senderEl?.getAttribute('name') ?? '';
-      const sender = (senderName === 'Me' || senderName === 'me') ? 'self' as const : 'other' as const;
+      const sender =
+        senderName === 'Me' || senderName === 'me' ? ('self' as const) : ('other' as const);
       messages.push({ sender, text: text.slice(0, 500) });
     }
     return messages.slice(-10);

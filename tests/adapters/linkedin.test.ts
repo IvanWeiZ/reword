@@ -7,7 +7,10 @@ describe('LinkedInAdapter', () => {
   let adapter: LinkedInAdapter;
 
   beforeEach(() => {
-    const html = readFileSync(resolve(__dirname, '../mocks/mock-dom-fixtures/linkedin-message.html'), 'utf-8');
+    const html = readFileSync(
+      resolve(__dirname, '../mocks/mock-dom-fixtures/linkedin-message.html'),
+      'utf-8',
+    );
     document.body.innerHTML = html;
     adapter = new LinkedInAdapter();
   });

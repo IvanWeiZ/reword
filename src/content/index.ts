@@ -1,4 +1,9 @@
-import type { PlatformAdapter, AnalysisResult, MessageToBackground, MessageFromBackground } from '../shared/types';
+import type {
+  PlatformAdapter,
+  AnalysisResult,
+  MessageToBackground,
+  MessageFromBackground,
+} from '../shared/types';
 import { DEBOUNCE_MS, MIN_MESSAGE_LENGTH, HEURISTIC_THRESHOLD } from '../shared/constants';
 import { scoreMessage } from './heuristic-scorer';
 import { InputObserver } from './observer';

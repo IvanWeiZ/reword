@@ -7,9 +7,13 @@ import type { MessageToBackground, MessageFromBackground } from '../shared/types
 const gemini = new GeminiClient();
 const ondevice = new OnDeviceClient();
 
-type ExtendedMessage = (MessageToBackground & { type: string }) | { type: 'validate-api-key'; apiKey: string };
+type ExtendedMessage =
+  | (MessageToBackground & { type: string })
+  | { type: 'validate-api-key'; apiKey: string };
 
-export async function handleMessage(message: ExtendedMessage): Promise<MessageFromBackground | { type: string; valid?: boolean }> {
+export async function handleMessage(
+  message: ExtendedMessage,
+): Promise<MessageFromBackground | { type: string; valid?: boolean }> {
   switch (message.type) {
     case 'validate-api-key': {
       const msg = message as { type: 'validate-api-key'; apiKey: string };
@@ -48,10 +52,20 @@ export async function handleMessage(message: ExtendedMessage): Promise<MessageFr
 
         // Tier 1: on-device AI (optional)
         const ondeviceResult = await ondevice.checkTone(msg.text);
-        if (ondeviceResult && !ondeviceResult.shouldFlag && ondeviceResult.confidence > ONDEVICE_CONFIDENCE_THRESHOLD) {
+        if (
+          ondeviceResult &&
+          !ondeviceResult.shouldFlag &&
+          ondeviceResult.confidence > ONDEVICE_CONFIDENCE_THRESHOLD
+        ) {
           return {
             type: 'analysis-result',
-            result: { shouldFlag: false, riskLevel: 'low', issues: [], explanation: '', rewrites: [] },
+            result: {
+              shouldFlag: false,
+              riskLevel: 'low',
+              issues: [],
+              explanation: '',
+              rewrites: [],
+            },
           };
         }
 
@@ -78,12 +92,18 @@ export async function handleMessage(message: ExtendedMessage): Promise<MessageFr
 
         return { type: 'analysis-result', result };
       } catch (error) {
-        return { type: 'analysis-error', error: error instanceof Error ? error.message : 'Unknown error' };
+        return {
+          type: 'analysis-error',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
       }
     }
 
     default:
-      return { type: 'analysis-error', error: `Unknown message type: ${(message as { type: string }).type}` };
+      return {
+        type: 'analysis-error',
+        error: `Unknown message type: ${(message as { type: string }).type}`,
+      };
   }
 }
 

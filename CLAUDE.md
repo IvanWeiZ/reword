@@ -11,7 +11,11 @@ npm run build        # Build to dist/ (3 bundles: service-worker, content, optio
 npm run dev          # Build in watch mode
 npm test             # Run all unit tests once (vitest run)
 npm run test:watch   # Run tests in watch mode
-npm run test:e2e     # Run Playwright e2e tests
+npm run test:e2e     # Run Playwright e2e tests (requires Chromium)
+npm run lint         # Run ESLint on src/ and tests/
+npm run lint:fix     # Run ESLint with auto-fix
+npm run format       # Format code with Prettier
+npm run format:check # Check formatting without writing
 ```
 
 ## Architecture
@@ -51,7 +55,7 @@ Each platform (Gmail, LinkedIn, Twitter) has an adapter in `src/adapters/` imple
 - **ES2022 target** with ESM modules (`"type": "module"`)
 - **Naming**: camelCase for functions/variables, PascalCase for classes/interfaces/types, kebab-case for CSS classes (prefixed with `reword-`)
 - **Conventional commits**: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, etc.
-- **No linter/formatter configured** — rely on TypeScript strict checks and tests
+- **ESLint + Prettier** — run `npm run lint` and `npm run format:check` before committing
 - **Minimal dependencies** — only runtime dependency is `@google/generative-ai`
 
 ## Key Constants (`src/shared/constants.ts`)
@@ -69,7 +73,8 @@ Each platform (Gmail, LinkedIn, Twitter) has an adapter in `src/adapters/` imple
 - Tests live in `tests/` mirroring the `src/` structure
 - Environment: jsdom (configured in `vitest.config.ts`)
 - Mocks for Chrome storage, DOM fixtures (Gmail/LinkedIn/Twitter HTML), and Gemini client in `tests/mocks/`
-- Always run `npm test` to verify changes pass before committing
+- E2e tests in `tests/e2e/` use Playwright with a real Chromium instance loading the built extension
+- Always run `npm test` and `npm run lint` to verify changes pass before committing
 
 ## Build Output
 

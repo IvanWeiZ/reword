@@ -35,7 +35,9 @@ describe('scoreMessage', () => {
 
   it('scores warm, clear messages as clean', () => {
     expect(scoreMessage('I really appreciate your help with this project')).toBeLessThan(0.3);
-    expect(scoreMessage('That sounds like a great idea, let me know how I can help')).toBeLessThan(0.3);
+    expect(scoreMessage('That sounds like a great idea, let me know how I can help')).toBeLessThan(
+      0.3,
+    );
   });
 
   it('returns a number between 0 and 1', () => {
