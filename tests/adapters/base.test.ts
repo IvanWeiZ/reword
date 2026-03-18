@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { GenericFallbackAdapter } from '../../src/adapters/base';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { GenericFallbackAdapter, writeBackToElement } from '../../src/adapters/base';
 
 describe('GenericFallbackAdapter', () => {
   let adapter: GenericFallbackAdapter;
@@ -56,6 +56,70 @@ describe('GenericFallbackAdapter', () => {
       const result = adapter.writeBack('hello');
       expect(result).toBe(true);
       expect(textarea.value).toBe('hello');
+    });
+
+    it('writes to a contentEditable element', () => {
+      const div = document.createElement('div');
+      div.setAttribute('contenteditable', 'true');
+      div.textContent = 'old text';
+      document.body.innerHTML = '';
+      document.body.appendChild(div);
+      adapter.findInputField = () => div;
+      const result = adapter.writeBack('new text');
+      expect(result).toBe(true);
+      expect(div.textContent).toBe('new text');
+    });
+  });
+
+  describe('writeBackToElement', () => {
+    it('sets textarea value via fallback when execCommand fails', () => {
+      const textarea = document.createElement('textarea');
+      textarea.value = 'old';
+      document.body.appendChild(textarea);
+      writeBackToElement(textarea, 'new value');
+      expect(textarea.value).toBe('new value');
+    });
+
+    it('sets contentEditable textContent via fallback when execCommand fails', () => {
+      const div = document.createElement('div');
+      div.setAttribute('contenteditable', 'true');
+      div.textContent = 'old';
+      document.body.appendChild(div);
+      writeBackToElement(div, 'new content');
+      expect(div.textContent).toBe('new content');
+    });
+
+    it('dispatches input event on textarea fallback', () => {
+      const textarea = document.createElement('textarea');
+      document.body.appendChild(textarea);
+      const handler = vi.fn();
+      textarea.addEventListener('input', handler);
+      writeBackToElement(textarea, 'hello');
+      expect(handler).toHaveBeenCalledTimes(1);
+      const event = handler.mock.calls[0][0] as InputEvent;
+      expect(event.inputType).toBe('insertText');
+      expect(event.data).toBe('hello');
+    });
+
+    it('dispatches input event on contentEditable fallback', () => {
+      const div = document.createElement('div');
+      div.setAttribute('contenteditable', 'true');
+      document.body.appendChild(div);
+      const handler = vi.fn();
+      div.addEventListener('input', handler);
+      writeBackToElement(div, 'hello');
+      expect(handler).toHaveBeenCalledTimes(1);
+      const event = handler.mock.calls[0][0] as InputEvent;
+      expect(event.inputType).toBe('insertText');
+      expect(event.data).toBe('hello');
+    });
+
+    it('focuses the element before writing', () => {
+      const textarea = document.createElement('textarea');
+      document.body.appendChild(textarea);
+      const focusSpy = vi.spyOn(textarea, 'focus');
+      writeBackToElement(textarea, 'test');
+      expect(focusSpy).toHaveBeenCalled();
     });
   });
 

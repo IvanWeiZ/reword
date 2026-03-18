@@ -1,5 +1,5 @@
 import type { PlatformAdapter, ThreadMessage } from '../shared/types';
-import { selectAllContent, insertText } from './base';
+import { writeBackToElement } from './base';
 
 export class GmailAdapter implements PlatformAdapter {
   platformName = 'gmail';
@@ -20,9 +20,7 @@ export class GmailAdapter implements PlatformAdapter {
   writeBack(text: string): boolean {
     const input = this.findInputField();
     if (!input) return false;
-    input.focus();
-    selectAllContent(input);
-    insertText(input, text);
+    writeBackToElement(input, text);
     return true;
   }
 

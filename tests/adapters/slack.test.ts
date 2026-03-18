@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { SlackAdapter } from '../../src/adapters/slack';
@@ -48,6 +48,16 @@ describe('SlackAdapter', () => {
   it('writeBack returns false when no input exists', () => {
     document.body.innerHTML = '<div></div>';
     expect(adapter.writeBack('test')).toBe(false);
+  });
+
+  it('writeBack replaces content and dispatches input event', () => {
+    const input = adapter.findInputField();
+    expect(input).not.toBeNull();
+    const handler = vi.fn();
+    input!.addEventListener('input', handler);
+    adapter.writeBack('Rewritten message');
+    expect(input!.textContent).toBe('Rewritten message');
+    expect(handler).toHaveBeenCalled();
   });
 
   it('scrapeThreadContext extracts messages', () => {

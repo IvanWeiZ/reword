@@ -1,36 +1,56 @@
-const PASSIVE_AGGRESSIVE_PATTERNS = [
-  /\bfine\.\s*$/i,
-  /\bwhatever\b/i,
-  /\bper my last email\b/i,
-  /\bas I already mentioned\b/i,
-  /\bas previously stated\b/i,
-  /\bnot like I\b.*\bor anything\b/i,
-  /\bI guess\b.*\b(works|fine|so|whatever)\b/i,
-  /\bthanks for nothing\b/i,
-  /\bno worries\b.*\bI'll just\b/i,
-  /\bmust be nice\b/i,
-  /\bgood for you\b/i,
+/**
+ * Each passive-aggressive pattern has a weight. Within the "patterns" category,
+ * only the highest-weight match counts (weighted-max-then-sum across categories).
+ */
+const PASSIVE_AGGRESSIVE_PATTERNS: { pattern: RegExp; weight: number }[] = [
+  { pattern: /\bfine\.\s*$/i, weight: 0.35 },
+  { pattern: /\bwhatever\b/i, weight: 0.35 },
+  { pattern: /\bper my last email\b/i, weight: 0.4 },
+  { pattern: /\bas I already mentioned\b/i, weight: 0.35 },
+  { pattern: /\bas previously stated\b/i, weight: 0.35 },
+  { pattern: /\bnot like I\b.*\bor anything\b/i, weight: 0.35 },
+  { pattern: /\bI guess\b.*\b(works|fine|so|whatever)\b/i, weight: 0.35 },
+  { pattern: /\bthanks for nothing\b/i, weight: 0.4 },
+  { pattern: /\bno worries\b.*\bI'll just\b/i, weight: 0.35 },
+  { pattern: /\bmust be nice\b/i, weight: 0.35 },
+  { pattern: /\bgood for you\b/i, weight: 0.3 },
+  { pattern: /\bas I already explained\b/i, weight: 0.35 },
+  { pattern: /\bthis was already covered\b/i, weight: 0.35 },
 ];
 
-const NEGATIVE_KEYWORDS = [
-  'stupid',
-  'idiot',
-  'hate',
-  'annoying',
-  'useless',
-  'pathetic',
-  'ridiculous',
-  'disgusting',
-  'terrible',
-  'awful',
-  'never mind',
-  'forget it',
-  "don't bother",
+/**
+ * Each negative keyword has a weight. Within the "keywords" category,
+ * only the highest-weight match counts.
+ */
+const NEGATIVE_KEYWORDS: { keyword: string; weight: number }[] = [
+  { keyword: 'stupid', weight: 0.2 },
+  { keyword: 'idiot', weight: 0.2 },
+  { keyword: 'hate', weight: 0.2 },
+  { keyword: 'annoying', weight: 0.15 },
+  { keyword: 'useless', weight: 0.2 },
+  { keyword: 'pathetic', weight: 0.2 },
+  { keyword: 'ridiculous', weight: 0.15 },
+  { keyword: 'disgusting', weight: 0.2 },
+  { keyword: 'terrible', weight: 0.15 },
+  { keyword: 'awful', weight: 0.15 },
+  { keyword: 'never mind', weight: 0.15 },
+  { keyword: 'forget it', weight: 0.15 },
+  { keyword: "don't bother", weight: 0.15 },
 ];
 
 /**
  * Scores a message from 0 (clean) to 1 (very problematic).
  * Runs synchronously in < 5ms.
+ *
+ * Uses a weighted-max-then-sum approach:
+ *  - Within each category (patterns, keywords, caps, punctuation, custom),
+ *    the highest-scoring match is the base score. Additional matches within
+ *    the same category add a small bonus (+0.15 each, capped per category).
+ *  - Scores are then summed across categories.
+ *
+ * This prevents a message like "WHATEVER!!!" from inflating its score by
+ * matching multiple patterns within one category, while still recognising
+ * that multiple distinct passive-aggressive phrases are worse than one.
  *
  * @param customPatterns Optional user-defined regex strings from settings.
  */
@@ -44,26 +64,33 @@ export function scoreMessage(text: string, customPatterns: string[] = []): numbe
   let customScore = 0;
   const lower = text.toLowerCase();
 
-  // Check passive-aggressive patterns (high signal) — cap at one match worth
+  // Check passive-aggressive patterns — highest-weight match + small bonus for extras
+  const EXTRA_MATCH_BONUS = 0.15;
+  const PATTERN_CAP = 0.7;
   let patternMatches = 0;
-  for (const pattern of PASSIVE_AGGRESSIVE_PATTERNS) {
+  for (const { pattern, weight } of PASSIVE_AGGRESSIVE_PATTERNS) {
     if (pattern.test(text)) {
+      patternScore = Math.max(patternScore, weight);
       patternMatches++;
     }
   }
-  if (patternMatches > 0) {
-    patternScore = Math.min(0.5, 0.35 * patternMatches);
+  if (patternMatches > 1) {
+    patternScore = Math.min(PATTERN_CAP, patternScore + (patternMatches - 1) * EXTRA_MATCH_BONUS);
   }
 
-  // Check negative keywords — cap contribution
+  // Check negative keywords — highest-weight match + small bonus for extras
+  // Uses word-boundary regex to avoid substring false positives (e.g. "whatever" matching "hate")
+  const KEYWORD_CAP = 0.4;
   let keywordMatches = 0;
-  for (const keyword of NEGATIVE_KEYWORDS) {
-    if (lower.includes(keyword)) {
+  for (const { keyword, weight } of NEGATIVE_KEYWORDS) {
+    const keywordRe = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (keywordRe.test(text)) {
+      keywordScore = Math.max(keywordScore, weight);
       keywordMatches++;
     }
   }
-  if (keywordMatches > 0) {
-    keywordScore = Math.min(0.4, 0.2 * keywordMatches);
+  if (keywordMatches > 1) {
+    keywordScore = Math.min(KEYWORD_CAP, keywordScore + (keywordMatches - 1) * EXTRA_MATCH_BONUS);
   }
 
   // ALL CAPS detection (check if >50% of alpha chars are uppercase)
@@ -75,25 +102,23 @@ export function scoreMessage(text: string, customPatterns: string[] = []): numbe
     }
   }
 
-  // Excessive punctuation (!! or ?? or ?!) — cap contribution
+  // Excessive punctuation (!! or ?? or ?!) — single category, one score
   const excessivePunctuation = text.match(/[!?]{2,}/g);
   if (excessivePunctuation) {
-    punctuationScore = Math.min(0.4, 0.3 * excessivePunctuation.length);
+    punctuationScore = 0.3;
   }
 
-  // User-defined custom patterns (#9)
+  // User-defined custom patterns (#9) — take highest-weight match only
   if (customPatterns.length > 0) {
-    let customMatches = 0;
     for (const patStr of customPatterns) {
       try {
         const re = new RegExp(patStr, 'i');
-        if (re.test(text)) customMatches++;
+        if (re.test(text)) {
+          customScore = Math.max(customScore, 0.3);
+        }
       } catch {
         // Skip invalid patterns
       }
-    }
-    if (customMatches > 0) {
-      customScore = Math.min(0.4, 0.3 * customMatches);
     }
   }
 

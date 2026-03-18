@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { TwitterAdapter } from '../../src/adapters/twitter';
@@ -62,6 +62,15 @@ describe('TwitterAdapter', () => {
     adapter.writeBack('New DM text');
     const input = adapter.findInputField();
     expect(input?.textContent).toBe('New DM text');
+  });
+
+  it('writeBack dispatches input event for framework compatibility', () => {
+    const input = adapter.findInputField();
+    expect(input).not.toBeNull();
+    const handler = vi.fn();
+    input!.addEventListener('input', handler);
+    adapter.writeBack('New text');
+    expect(handler).toHaveBeenCalled();
   });
 
   it('scrapeThreadContext returns an array', () => {

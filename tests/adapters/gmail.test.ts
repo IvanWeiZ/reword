@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { GmailAdapter } from '../../src/adapters/gmail';
@@ -56,6 +56,15 @@ describe('GmailAdapter', () => {
     adapter.writeBack('Rewritten email body');
     const input = adapter.findInputField();
     expect(input?.textContent).toBe('Rewritten email body');
+  });
+
+  it('writeBack dispatches input event for framework compatibility', () => {
+    const input = adapter.findInputField();
+    expect(input).not.toBeNull();
+    const handler = vi.fn();
+    input!.addEventListener('input', handler);
+    adapter.writeBack('New text');
+    expect(handler).toHaveBeenCalled();
   });
 
   it('scrapeThreadContext returns an array', () => {

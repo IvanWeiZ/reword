@@ -70,4 +70,5 @@ describe('scoreMessage', () => {
     const score = scoreMessage('whatever', []);
     expect(score).toBeGreaterThanOrEqual(0.3);
   });
+
 });

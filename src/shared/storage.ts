@@ -54,9 +54,15 @@ const migrations: Record<number, MigrationFn> = {
 };
 
 export function migrate(data: StoredData): StoredData {
+  // If data is from a future version (e.g. downgrade scenario), return as-is
+  // to avoid corrupting data we don't understand
+  if (data.schemaVersion > CURRENT_SCHEMA_VERSION) {
+    return { ...data };
+  }
+
   let current = { ...DEFAULT_STORED_DATA, ...data };
 
-  // Apply each migration in order
+  // Apply each migration in order from stored version to current
   for (let v = current.schemaVersion + 1; v <= CURRENT_SCHEMA_VERSION; v++) {
     const fn = migrations[v];
     if (fn) {

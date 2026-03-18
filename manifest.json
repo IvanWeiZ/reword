@@ -11,6 +11,9 @@
     "https://twitter.com/*",
     "https://*.slack.com/*",
     "https://discord.com/*",
+    "https://outlook.live.com/*",
+    "https://outlook.office.com/*",
+    "https://web.whatsapp.com/*",
     "https://generativelanguage.googleapis.com/*"
   ],
   "background": {
@@ -25,7 +28,10 @@
         "https://x.com/*",
         "https://twitter.com/*",
         "https://*.slack.com/*",
-        "https://discord.com/*"
+        "https://discord.com/*",
+        "https://outlook.live.com/*",
+        "https://outlook.office.com/*",
+        "https://web.whatsapp.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

@@ -1,28 +1,29 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { DiscordAdapter } from '../../src/adapters/discord';
+import { WhatsAppAdapter } from '../../src/adapters/whatsapp';
 
-describe('DiscordAdapter', () => {
-  let adapter: DiscordAdapter;
+describe('WhatsAppAdapter', () => {
+  let adapter: WhatsAppAdapter;
 
   beforeEach(() => {
     const html = readFileSync(
-      resolve(__dirname, '../mocks/mock-dom-fixtures/discord-message.html'),
+      resolve(__dirname, '../mocks/mock-dom-fixtures/whatsapp-message.html'),
       'utf-8',
     );
     document.body.innerHTML = html;
-    adapter = new DiscordAdapter();
+    adapter = new WhatsAppAdapter();
   });
 
-  it('has platformName "discord"', () => {
-    expect(adapter.platformName).toBe('discord');
+  it('has platformName "whatsapp"', () => {
+    expect(adapter.platformName).toBe('whatsapp');
   });
 
-  it('finds the Discord text input', () => {
+  it('finds the WhatsApp message input', () => {
     const field = adapter.findInputField();
     expect(field).not.toBeNull();
-    expect(field?.getAttribute('role')).toBe('textbox');
+    expect(field?.getAttribute('contenteditable')).toBe('true');
+    expect(field?.getAttribute('data-tab')).toBe('10');
   });
 
   it('returns null when input is missing', () => {
@@ -30,7 +31,7 @@ describe('DiscordAdapter', () => {
     expect(adapter.findInputField()).toBeNull();
   });
 
-  it('places trigger icon in buttons area', () => {
+  it('places trigger icon near the send button', () => {
     const icon = document.createElement('div');
     icon.id = 'reword-trigger';
     const cleanup = adapter.placeTriggerIcon(icon);
@@ -40,7 +41,7 @@ describe('DiscordAdapter', () => {
     expect(document.getElementById('reword-trigger')).toBeNull();
   });
 
-  it('placeTriggerIcon returns null when buttons area is missing', () => {
+  it('placeTriggerIcon returns null when send button is missing', () => {
     document.body.innerHTML = '<div></div>';
     expect(adapter.placeTriggerIcon(document.createElement('div'))).toBeNull();
   });
@@ -50,27 +51,21 @@ describe('DiscordAdapter', () => {
     expect(adapter.writeBack('test')).toBe(false);
   });
 
-  it('writeBack replaces content and dispatches input event', () => {
-    const input = adapter.findInputField();
-    expect(input).not.toBeNull();
-    const handler = vi.fn();
-    input!.addEventListener('input', handler);
-    adapter.writeBack('Rewritten message');
-    expect(input!.textContent).toBe('Rewritten message');
-    expect(handler).toHaveBeenCalled();
-  });
-
-  it('scrapeThreadContext extracts messages', () => {
+  it('scrapeThreadContext extracts messages with correct sender', () => {
     const context = adapter.scrapeThreadContext();
-    expect(context.length).toBe(2);
-    expect(context[0].text).toBe('Hello there');
-    expect(context[1].text).toBe('Hey!');
+    expect(context.length).toBe(3);
+    expect(context[0].sender).toBe('other');
+    expect(context[0].text).toBe('Hey, can we talk about the project?');
+    expect(context[1].sender).toBe('self');
+    expect(context[1].text).toBe("Sure, what's up?");
+    expect(context[2].sender).toBe('other');
+    expect(context[2].text).toBe('I think we need to change the deadline.');
   });
 
   it('getIncomingMessageElements returns non-self messages', () => {
     const elements = adapter.getIncomingMessageElements();
-    // First message has no .mentioned, second has .mentioned (self)
-    expect(elements.length).toBe(1);
+    // Two incoming messages (message-in), one outgoing (message-out)
+    expect(elements.length).toBe(2);
   });
 
   it('checkHealth returns true when input exists', () => {

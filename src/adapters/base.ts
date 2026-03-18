@@ -2,32 +2,55 @@ import type { PlatformAdapter, ThreadMessage } from '../shared/types';
 
 export type { PlatformAdapter };
 
-/** Select all content in a contenteditable element. */
-export function selectAllContent(element: HTMLElement): void {
-  const selection = window.getSelection();
-  if (!selection) return;
-  const range = document.createRange();
-  range.selectNodeContents(element);
-  selection.removeAllRanges();
-  selection.addRange(range);
+/**
+ * Write text back to an element, replacing its current content.
+ * Works with both contentEditable elements (Gmail, LinkedIn, etc.)
+ * and textarea/input elements (generic fallback).
+ *
+ * Uses execCommand('insertText') as the primary method (still works in Chrome
+ * and properly fires framework-compatible input events), with a direct-set
+ * fallback for environments where execCommand is unavailable or fails.
+ */
+/** Check whether an element is contentEditable. */
+function isContentEditable(element: HTMLElement): boolean {
+  return (
+    element.isContentEditable === true ||
+    element.getAttribute('contenteditable') === 'true'
+  );
 }
 
-/** Insert text into a focused element, preferring InputEvent over deprecated execCommand. */
-export function insertText(element: HTMLElement, text: string): void {
-  // Use InputEvent-based insertion (modern browsers)
-  const event = new InputEvent('beforeinput', {
-    inputType: 'insertText',
-    data: text,
-    bubbles: true,
-    cancelable: true,
-    composed: true,
-  });
-  const cancelled = !element.dispatchEvent(event);
-  if (!cancelled) {
-    // Fallback: set content directly and fire input event
-    element.textContent = text;
+export function writeBackToElement(element: HTMLElement, text: string): void {
+  element.focus();
+
+  // For contentEditable elements (Gmail, LinkedIn, etc.)
+  if (isContentEditable(element)) {
+    // Select all content, then use insertText via execCommand
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  } else {
+    // For textarea/input elements
+    (element as HTMLTextAreaElement).select();
+  }
+
+  // Use execCommand as primary (still works in Chrome), with direct-set fallback
+  let inserted = false;
+  try {
+    inserted = document.execCommand('insertText', false, text);
+  } catch {
+    // execCommand may not exist in all environments (e.g. jsdom)
+  }
+  if (!inserted) {
+    // Fallback: direct value set + input event dispatch
+    if (isContentEditable(element)) {
+      element.textContent = text;
+    } else {
+      (element as HTMLTextAreaElement).value = text;
+    }
     element.dispatchEvent(
-      new InputEvent('input', { inputType: 'insertText', data: text, bubbles: true }),
+      new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' }),
     );
   }
 }
@@ -67,15 +90,8 @@ export class GenericFallbackAdapter implements PlatformAdapter {
   writeBack(text: string): boolean {
     const input = this.findInputField();
     if (!input) return false;
-    if (input instanceof HTMLTextAreaElement) {
-      input.value = text;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      return true;
-    }
-    if (input.isContentEditable) {
-      input.focus();
-      selectAllContent(input);
-      insertText(input, text);
+    if (input instanceof HTMLTextAreaElement || isContentEditable(input)) {
+      writeBackToElement(input, text);
       return true;
     }
     return false;
