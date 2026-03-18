@@ -3,7 +3,6 @@ import { createMockChromeStorage } from '../mocks/mock-chrome-storage';
 import { DEFAULT_STORED_DATA, HEURISTIC_THRESHOLD } from '../../src/shared/constants';
 import { scoreMessage } from '../../src/content/heuristic-scorer';
 import { handleMessage } from '../../src/background/service-worker';
-import type { StoredData } from '../../src/shared/types';
 
 // --- Module-level mocks for GeminiClient and OnDeviceClient ---
 

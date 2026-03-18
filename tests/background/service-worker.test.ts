@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockChromeStorage } from '../mocks/mock-chrome-storage';
 import { MOCK_FLAGGED_RESULT, MOCK_CLEAN_RESULT } from '../mocks/mock-gemini-client';
 import { DEFAULT_STORED_DATA } from '../../src/shared/constants';

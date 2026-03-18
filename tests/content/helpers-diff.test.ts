@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { wordDiff, renderDiffHTML, DiffSegment } from '../../src/content/helpers';
+import { wordDiff, renderDiffHTML } from '../../src/content/helpers';
 
 describe('wordDiff', () => {
   it('returns equal segments for identical text', () => {

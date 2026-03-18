@@ -1,9 +1,8 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   parseAnalysisResponse,
   parseIncomingAnalysisResponse,
 } from '../../src/background/gemini-client';
-import type { AnalysisResult, IncomingAnalysis } from '../../src/shared/types';
 
 // --- Mock @google/generative-ai ---
 
@@ -237,7 +236,6 @@ describe('GeminiClient', () => {
       // is aborted, the loop throws TimeoutError.
 
       // Simulate: stream yields one chunk, then the timeout fires, then stream yields another
-      let abortController: AbortController | null = null;
       const stream = {
         stream: {
           async *[Symbol.asyncIterator]() {
