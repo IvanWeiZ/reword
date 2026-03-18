@@ -6,7 +6,6 @@ import {
   renderDomains,
   renderPatterns,
   renderPersonas,
-  renderSuppressedPhrases,
   renderLearnedPreferences,
 } from './renderers';
 

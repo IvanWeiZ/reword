@@ -109,7 +109,6 @@ export function scoreMessage(
   let sarcasmScore = 0;
   let hedgingScore = 0;
   let exclamationInflationScore = 0;
-  const lower = text.toLowerCase();
 
   // Check passive-aggressive patterns — highest-weight match + small bonus for extras
   const EXTRA_MATCH_BONUS = 0.15;
