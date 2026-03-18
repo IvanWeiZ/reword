@@ -10,7 +10,8 @@ export class OnDeviceClient {
     if (this.available !== null) return this.available;
     try {
       this.available = typeof (globalThis as any).ai?.languageModel?.create === 'function';
-    } catch {
+    } catch (error) {
+      console.warn('[Reword] On-device AI availability check failed:', error);
       this.available = false;
     }
     return this.available;
@@ -22,9 +23,12 @@ export class OnDeviceClient {
     try {
       const ai = (globalThis as any).ai;
       const session = await ai.languageModel.create({
-        systemPrompt: 'You analyze message tone. Respond with ONLY a JSON object: {"problematic": true/false, "confidence": 0.0-1.0}',
+        systemPrompt:
+          'You analyze message tone. Respond with ONLY a JSON object: {"problematic": true/false, "confidence": 0.0-1.0}',
       });
-      const response = await session.prompt(`Is this message potentially problematic in tone? "${text}"`);
+      const response = await session.prompt(
+        `Is this message potentially problematic in tone? "${text}"`,
+      );
       session.destroy();
 
       const parsed = JSON.parse(response);
@@ -32,7 +36,8 @@ export class OnDeviceClient {
         shouldFlag: parsed.problematic === true,
         confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
       };
-    } catch {
+    } catch (error) {
+      console.warn('[Reword] On-device AI tone check failed:', error);
       return null;
     }
   }

@@ -2,11 +2,40 @@ import type { PlatformAdapter, ThreadMessage } from '../shared/types';
 
 export type { PlatformAdapter };
 
-export class GenericFallbackAdapter implements PlatformAdapter {
-  findInputField(): HTMLElement | null {
-    const editables = document.querySelectorAll<HTMLElement>(
-      '[contenteditable="true"], textarea'
+/** Select all content in a contenteditable element. */
+export function selectAllContent(element: HTMLElement): void {
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+/** Insert text into a focused element, preferring InputEvent over deprecated execCommand. */
+export function insertText(element: HTMLElement, text: string): void {
+  // Use InputEvent-based insertion (modern browsers)
+  const event = new InputEvent('beforeinput', {
+    inputType: 'insertText',
+    data: text,
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+  });
+  const cancelled = !element.dispatchEvent(event);
+  if (!cancelled) {
+    // Fallback: set content directly and fire input event
+    element.textContent = text;
+    element.dispatchEvent(
+      new InputEvent('input', { inputType: 'insertText', data: text, bubbles: true }),
     );
+  }
+}
+
+export class GenericFallbackAdapter implements PlatformAdapter {
+  platformName = 'generic';
+  findInputField(): HTMLElement | null {
+    const editables = document.querySelectorAll<HTMLElement>('[contenteditable="true"], textarea');
     let best: HTMLElement | null = null;
     let bestArea = 0;
     for (const el of editables) {
@@ -45,8 +74,8 @@ export class GenericFallbackAdapter implements PlatformAdapter {
     }
     if (input.isContentEditable) {
       input.focus();
-      document.execCommand('selectAll', false);
-      document.execCommand('insertText', false, text);
+      selectAllContent(input);
+      insertText(input, text);
       return true;
     }
     return false;
@@ -54,5 +83,9 @@ export class GenericFallbackAdapter implements PlatformAdapter {
 
   scrapeThreadContext(): ThreadMessage[] {
     return [];
+  }
+
+  checkHealth(): boolean {
+    return this.findInputField() !== null;
   }
 }

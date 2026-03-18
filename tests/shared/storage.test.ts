@@ -15,10 +15,16 @@ describe('loadStoredData', () => {
     const data = await loadStoredData();
     expect(data.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(data.settings.sensitivity).toBe('medium');
+    expect(data.settings.customPatterns).toEqual([]);
+    expect(data.settings.theme).toBe('auto');
+    expect(data.dismissedPatterns).toEqual([]);
   });
 
   it('returns saved data when present', async () => {
-    const custom = { ...DEFAULT_STORED_DATA, settings: { ...DEFAULT_STORED_DATA.settings, sensitivity: 'high' as const } };
+    const custom = {
+      ...DEFAULT_STORED_DATA,
+      settings: { ...DEFAULT_STORED_DATA.settings, sensitivity: 'high' as const },
+    };
     await mockStorage.local.set({ reword: custom });
     const data = await loadStoredData();
     expect(data.settings.sensitivity).toBe('high');
@@ -41,7 +47,10 @@ describe('loadStoredData', () => {
 
 describe('saveStoredData', () => {
   it('persists data to chrome storage', async () => {
-    const custom = { ...DEFAULT_STORED_DATA, settings: { ...DEFAULT_STORED_DATA.settings, sensitivity: 'low' as const } };
+    const custom = {
+      ...DEFAULT_STORED_DATA,
+      settings: { ...DEFAULT_STORED_DATA.settings, sensitivity: 'low' as const },
+    };
     await saveStoredData(custom);
     const raw = await mockStorage.local.get('reword');
     expect((raw.reword as any).settings.sensitivity).toBe('low');

@@ -22,6 +22,8 @@ export function createMockChromeStorage() {
       },
     },
     _getStore: () => store,
-    _setStore: (data: StorageData) => { store = data; },
+    _setStore: (data: StorageData) => {
+      store = data;
+    },
   };
 }

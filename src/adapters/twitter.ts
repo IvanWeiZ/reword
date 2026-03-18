@@ -1,10 +1,10 @@
 import type { PlatformAdapter, ThreadMessage } from '../shared/types';
+import { selectAllContent, insertText } from './base';
 
 export class TwitterAdapter implements PlatformAdapter {
+  platformName = 'twitter';
   findInputField(): HTMLElement | null {
-    return document.querySelector<HTMLElement>(
-      '[data-testid="dmComposerTextInput"]'
-    );
+    return document.querySelector<HTMLElement>('[data-testid="dmComposerTextInput"]');
   }
 
   placeTriggerIcon(icon: HTMLElement): (() => void) | null {
@@ -21,9 +21,17 @@ export class TwitterAdapter implements PlatformAdapter {
     const input = this.findInputField();
     if (!input) return false;
     input.focus();
-    document.execCommand('selectAll', false);
-    document.execCommand('insertText', false, text);
+    selectAllContent(input);
+    insertText(input, text);
     return true;
+  }
+
+  checkHealth(): boolean {
+    const input = this.findInputField();
+    const sendBtn = document.querySelector('[data-testid="dmComposerSendButton"]');
+    if (!input) console.warn('[Reword] Twitter: DM input not found');
+    if (!sendBtn) console.warn('[Reword] Twitter: send button not found');
+    return input !== null && sendBtn !== null;
   }
 
   scrapeThreadContext(): ThreadMessage[] {
@@ -35,5 +43,20 @@ export class TwitterAdapter implements PlatformAdapter {
       messages.push({ sender: 'other', text: text.slice(0, 500) });
     }
     return messages.slice(-10);
+  }
+
+  getIncomingMessageElements(): HTMLElement[] {
+    return Array.from(document.querySelectorAll<HTMLElement>('[data-testid="messageEntry"]')).slice(
+      -5,
+    );
+  }
+
+  placeIncomingIndicator(messageEl: HTMLElement, indicator: HTMLElement): (() => void) | null {
+    const tweetText = messageEl.querySelector('[data-testid="tweetText"]');
+    if (!tweetText) return null;
+    indicator.style.display = 'inline-flex';
+    indicator.style.marginLeft = '6px';
+    tweetText.appendChild(indicator);
+    return () => indicator.remove();
   }
 }
