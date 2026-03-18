@@ -168,6 +168,84 @@ describe('handleMessage', () => {
     expect((result as any).suppressed).toBe(false);
   });
 
+  // --- Suppress phrase (dismiss memory) tests ---
+
+  it('suppress-phrase adds phrase to suppressedPhrases in storage', async () => {
+    await mockStorage.local.set({ reword: DEFAULT_STORED_DATA });
+    await handleMessage({ type: 'suppress-phrase', text: 'whatever I guess' });
+    const result = await handleMessage({ type: 'get-settings' });
+    expect((result as any).data.settings.suppressedPhrases).toContain('whatever I guess');
+  });
+
+  it('suppressed phrase is detected on next check-suppressed (exact match)', async () => {
+    await mockStorage.local.set({ reword: DEFAULT_STORED_DATA });
+    await handleMessage({ type: 'suppress-phrase', text: 'whatever i guess' });
+    const result = await handleMessage({
+      type: 'check-suppressed',
+      textSnippet: 'whatever i guess',
+    });
+    expect((result as any).suppressed).toBe(true);
+  });
+
+  it('suppressed phrase is detected as substring match', async () => {
+    await mockStorage.local.set({ reword: DEFAULT_STORED_DATA });
+    await handleMessage({ type: 'suppress-phrase', text: 'whatever' });
+    const result = await handleMessage({
+      type: 'check-suppressed',
+      textSnippet: 'well whatever i guess that works',
+    });
+    expect((result as any).suppressed).toBe(true);
+  });
+
+  it('suppressed phrase matching is case-insensitive', async () => {
+    await mockStorage.local.set({ reword: DEFAULT_STORED_DATA });
+    await handleMessage({ type: 'suppress-phrase', text: 'Whatever I Guess' });
+    const result = await handleMessage({
+      type: 'check-suppressed',
+      textSnippet: 'whatever i guess',
+    });
+    expect((result as any).suppressed).toBe(true);
+  });
+
+  it('suppress-phrase does not add duplicates', async () => {
+    await mockStorage.local.set({ reword: DEFAULT_STORED_DATA });
+    await handleMessage({ type: 'suppress-phrase', text: 'whatever' });
+    await handleMessage({ type: 'suppress-phrase', text: 'whatever' });
+    const result = await handleMessage({ type: 'get-settings' });
+    expect(
+      (result as any).data.settings.suppressedPhrases.filter((p: string) => p === 'whatever')
+        .length,
+    ).toBe(1);
+  });
+
+  it('remove-suppressed-phrase removes it and re-enables flagging', async () => {
+    const dataWithSuppressed = {
+      ...DEFAULT_STORED_DATA,
+      settings: {
+        ...DEFAULT_STORED_DATA.settings,
+        suppressedPhrases: ['whatever I guess'],
+      },
+    };
+    await mockStorage.local.set({ reword: dataWithSuppressed });
+
+    // Verify it's suppressed
+    let result = await handleMessage({
+      type: 'check-suppressed',
+      textSnippet: 'whatever I guess',
+    });
+    expect((result as any).suppressed).toBe(true);
+
+    // Remove it
+    await handleMessage({ type: 'remove-suppressed-phrase', text: 'whatever I guess' });
+
+    // Verify it's no longer suppressed
+    result = await handleMessage({
+      type: 'check-suppressed',
+      textSnippet: 'whatever I guess',
+    });
+    expect((result as any).suppressed).toBe(false);
+  });
+
   // --- New tests: validate-api-key ---
 
   describe('validate-api-key', () => {

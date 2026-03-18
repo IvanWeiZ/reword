@@ -46,6 +46,7 @@ function setupDOM() {
     <input id="new-persona-label" type="text" />
     <input id="new-persona-instruction" type="text" />
     <button id="add-persona">Add Persona</button>
+    <div id="suppressed-list"></div>
     <div id="stats"></div>
     <div id="history"></div>
     <button id="export-data">Export</button>
@@ -534,6 +535,51 @@ describe('add persona', () => {
 
     expect((document.getElementById('new-persona-label') as HTMLInputElement).value).toBe('');
     expect((document.getElementById('new-persona-instruction') as HTMLInputElement).value).toBe('');
+  });
+});
+
+// ── 8b. Suppressed phrases ─────────────────────────────────────────
+
+describe('suppressed phrases in options', () => {
+  it('renders suppressed phrases from storage', async () => {
+    await freshSetup({
+      settings: {
+        ...DEFAULT_STORED_DATA.settings,
+        suppressedPhrases: ['whatever I guess', 'fine then'],
+      },
+    });
+    await initModule();
+
+    const list = document.getElementById('suppressed-list')!;
+    expect(list.textContent).toContain('whatever I guess');
+    expect(list.textContent).toContain('fine then');
+  });
+
+  it('shows empty message when no suppressed phrases', async () => {
+    await freshSetup();
+    await initModule();
+
+    const list = document.getElementById('suppressed-list')!;
+    expect(list.textContent).toContain('No suppressed phrases yet');
+  });
+
+  it('removes a suppressed phrase when remove button clicked', async () => {
+    await freshSetup({
+      settings: {
+        ...DEFAULT_STORED_DATA.settings,
+        suppressedPhrases: ['whatever I guess', 'fine then'],
+      },
+    });
+    await initModule();
+
+    const list = document.getElementById('suppressed-list')!;
+    const removeBtn = list.querySelector('[data-remove-suppressed="0"]') as HTMLElement;
+    removeBtn.click();
+    await tick();
+
+    const stored = await getStoredData();
+    expect(stored.settings.suppressedPhrases).toEqual(['fine then']);
+    expect(stored.settings.suppressedPhrases).not.toContain('whatever I guess');
   });
 });
 

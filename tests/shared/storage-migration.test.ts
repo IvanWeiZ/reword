@@ -181,6 +181,36 @@ describe('migrate', () => {
     expect(result.stats.recentFlags).toHaveLength(1);
   });
 
+  it('v2 to v3 migration adds suppressedPhrases', () => {
+    const v2Data = {
+      schemaVersion: 2,
+      settings: {
+        geminiApiKey: 'test-key',
+        sensitivity: 'medium' as const,
+        enabledDomains: ['example.com'],
+        customPatterns: ['test'],
+        theme: 'auto' as const,
+        rewritePersonas: [],
+        analyzeIncoming: false,
+      },
+      relationshipProfiles: {},
+      stats: {
+        totalAnalyzed: 10,
+        totalFlagged: 3,
+        rewritesAccepted: 1,
+        monthlyApiCalls: 5,
+        monthlyApiCallsResetDate: '2026-01-01',
+        recentFlags: [],
+      },
+      dismissedPatterns: [],
+    };
+    const result = migrate(v2Data);
+    expect(result.schemaVersion).toBe(3);
+    expect(result.settings.suppressedPhrases).toEqual([]);
+    expect(result.settings.geminiApiKey).toBe('test-key');
+    expect(result.settings.customPatterns).toEqual(['test']);
+  });
+
   it('handles unknown future version gracefully', () => {
     const futureData = {
       ...DEFAULT_STORED_DATA,

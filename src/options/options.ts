@@ -6,6 +6,7 @@ import {
   renderDomains,
   renderPatterns,
   renderPersonas,
+  renderSuppressedPhrases,
 } from './renderers';
 
 let data: StoredData;

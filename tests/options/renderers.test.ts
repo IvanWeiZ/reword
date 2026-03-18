@@ -23,6 +23,7 @@ function setupDOM() {
     <div id="domains-list"></div>
     <div id="patterns-list"></div>
     <div id="personas-list"></div>
+    <div id="suppressed-list"></div>
     <div id="stats"></div>
     <div id="history"></div>
   `;
