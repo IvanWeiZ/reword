@@ -67,7 +67,7 @@ describe('migrate', () => {
       dismissedPatterns: [],
     };
     const result = migrate(v1Data);
-    expect(result.schemaVersion).toBe(3);
+    expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.settings.customPatterns).toEqual([]);
     expect(result.settings.theme).toBe('auto');
     expect(result.settings.rewritePersonas).toEqual([]);
@@ -205,7 +205,7 @@ describe('migrate', () => {
       dismissedPatterns: [],
     };
     const result = migrate(v2Data);
-    expect(result.schemaVersion).toBe(3);
+    expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.settings.suppressedPhrases).toEqual([]);
     expect(result.settings.geminiApiKey).toBe('test-key');
     expect(result.settings.customPatterns).toEqual(['test']);

@@ -86,7 +86,21 @@
   justify-content: flex-end;
 }
 
-.reword-send-original, .reword-cancel {
+.reword-send-original {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  color: #1a1a2e;
+}
+
+.reword-send-original:hover {
+  border-color: #6366f1;
+}
+
+.reword-cancel {
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 13px;
@@ -96,7 +110,7 @@
   color: #666;
 }
 
-.reword-send-original:hover, .reword-cancel:hover {
+.reword-cancel:hover {
   color: #333;
 }
 
@@ -171,11 +185,21 @@
     color: #aaa;
   }
 
-  .reword-send-original, .reword-cancel {
+  .reword-send-original {
+    background: #2a2a3e;
+    border-color: #444;
+    color: #e0e0e0;
+  }
+
+  .reword-send-original:hover {
+    border-color: #6366f1;
+  }
+
+  .reword-cancel {
     color: #aaa;
   }
 
-  .reword-send-original:hover, .reword-cancel:hover {
+  .reword-cancel:hover {
     color: #ccc;
   }
 

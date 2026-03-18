@@ -72,4 +72,19 @@ describe('CooldownTracker', () => {
     expect(COOLDOWN_WINDOW_MS).toBe(5 * 60 * 1000);
     expect(COOLDOWN_THRESHOLD).toBe(3);
   });
+
+  it('returns false after markShown is called (once per session)', () => {
+    tracker.recordAnalysis();
+    tracker.recordAnalysis();
+    tracker.recordAnalysis();
+    expect(tracker.shouldSuggestCooldown()).toBe(true);
+
+    tracker.markShown();
+    expect(tracker.shouldSuggestCooldown()).toBe(false);
+
+    // Even with more analyses, it stays false for this session
+    tracker.recordAnalysis();
+    tracker.recordAnalysis();
+    expect(tracker.shouldSuggestCooldown()).toBe(false);
+  });
 });

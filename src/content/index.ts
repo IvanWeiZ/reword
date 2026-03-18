@@ -7,6 +7,7 @@ import type {
 } from '../shared/types';
 import {
   DEBOUNCE_MS,
+  AI_DEBOUNCE_MS,
   MIN_MESSAGE_LENGTH,
   HEURISTIC_THRESHOLD,
 } from '../shared/constants';
@@ -14,8 +15,10 @@ import { scoreMessage } from './heuristic-scorer';
 import { InputObserver } from './observer';
 import { TriggerIcon } from './trigger';
 import { PopupCard } from './popup-card';
+import { InlineSuggestion } from './inline-suggestion';
 import { normalizeSnippet, deriveRecipientStyle } from './helpers';
 import { startIncomingAnalysis } from './incoming-analyzer';
+import { shouldShowSummary, showWeeklySummary } from './weekly-summary';
 import {
   GmailAdapter,
   LinkedInAdapter,
@@ -54,6 +57,7 @@ function init(): void {
   let generation = 0;
   let abortController: AbortController | null = null;
   let customPatterns: string[] = [];
+  let categoryBoosts: Record<string, number> = {};
   let theme: Theme = 'auto';
 
   const popup = new PopupCard({
@@ -64,7 +68,11 @@ function init(): void {
     },
     onDismiss: () => {
       if (currentText) {
-        sendMessage({ type: 'record-dismiss', textSnippet: normalizeSnippet(currentText) });
+        sendMessage({
+          type: 'record-dismiss',
+          textSnippet: normalizeSnippet(currentText),
+          categories: currentResult?.issues ?? [],
+        });
       }
     },
     onUndo: () => {
@@ -77,8 +85,13 @@ function init(): void {
     },
   });
 
+  const inlineSuggestion = new InlineSuggestion();
+
   const trigger = new TriggerIcon(() => {
     if (currentResult) {
+      // Dismiss ghost text when opening full popup
+      inlineSuggestion.dismiss();
+      popup.positionNear(trigger.element);
       popup.show(currentResult, currentText);
     }
   });
@@ -96,13 +109,53 @@ function init(): void {
       if (resp.data.settings.analyzeIncoming && adapter.getIncomingMessageElements) {
         startIncomingAnalysis(adapter, resp.data.settings.theme);
       }
+
+      // Check if weekly summary should be shown
+      const { weeklyStats, previousWeeklyStats, lastWeeklySummaryShown } = resp.data;
+      if (shouldShowSummary(lastWeeklySummaryShown, weeklyStats)) {
+        showWeeklySummary({
+          currentWeek: weeklyStats,
+          previousWeek: previousWeeklyStats,
+        });
+        // Mark as shown by updating storage via background
+        resp.data.lastWeeklySummaryShown = new Date().toISOString();
+        chrome.storage.local.set({ reword: resp.data });
+      }
+    }
+  });
+
+  // Load category boosts for adaptive false positive reduction
+  sendMessage({ type: 'get-category-boosts' }).then((resp) => {
+    if (resp.type === 'category-boosts') {
+      categoryBoosts = resp.boosts;
     }
   });
 
   const observer = new InputObserver({
     debounceMs: DEBOUNCE_MS,
+    aiDebounceMs: AI_DEBOUNCE_MS,
     minLength: MIN_MESSAGE_LENGTH,
-    onAnalyze: async (text) => {
+
+    // Stage 1 (800ms): fast local heuristic — show badge immediately if flagged
+    onHeuristic: (text) => {
+      const score = scoreMessage(text, customPatterns, categoryBoosts);
+      if (score < HEURISTIC_THRESHOLD) {
+        trigger.hide();
+        inlineSuggestion.dismiss();
+        currentResult = null;
+        return;
+      }
+
+      // Heuristic flagged — show trigger badge immediately for fast feedback
+      // Use 'low' as preliminary risk level; AI stage 2 will refine it
+      currentText = text;
+      trigger.show('low');
+      if (triggerCleanup) triggerCleanup();
+      triggerCleanup = adapter.placeTriggerIcon(trigger.element);
+    },
+
+    // Stage 2 (2000ms): full AI analysis with rewrites
+    onAiAnalyze: async (text) => {
       const thisGeneration = ++generation;
 
       // Cancel any in-flight request
@@ -110,10 +163,11 @@ function init(): void {
       abortController = new AbortController();
       const signal = abortController.signal;
 
-      // Tier 0: local heuristic (with custom patterns #9)
-      const score = scoreMessage(text, customPatterns);
+      // Re-check heuristic (text may have changed since stage 1)
+      const score = scoreMessage(text, customPatterns, categoryBoosts);
       if (score < HEURISTIC_THRESHOLD) {
         trigger.hide();
+        inlineSuggestion.dismiss();
         currentResult = null;
         return;
       }
@@ -146,6 +200,7 @@ function init(): void {
       const recipientStyle = deriveRecipientStyle(adapter);
 
       // Show streaming indicator (#7)
+      popup.positionNear(trigger.element);
       popup.showStreaming();
 
       // Send to background for analysis (with personas #13 and recipient style #8)
@@ -172,6 +227,17 @@ function init(): void {
         if (triggerCleanup) triggerCleanup();
         triggerCleanup = adapter.placeTriggerIcon(trigger.element);
 
+        // Show inline ghost text with the first (Warmer) rewrite as fast-path
+        const inputField = adapter.findInputField();
+        if (inputField && response.result.rewrites.length > 0) {
+          const topRewrite = response.result.rewrites[0].text;
+          inlineSuggestion.show(inputField, text, topRewrite, (accepted) => {
+            previousText = currentText;
+            adapter.writeBack(accepted);
+            sendMessage({ type: 'increment-stat', stat: 'rewritesAccepted' });
+          });
+        }
+
         // Record flag event for history (#1)
         sendMessage({
           type: 'record-flag',
@@ -185,6 +251,7 @@ function init(): void {
         });
       } else {
         trigger.hide();
+        inlineSuggestion.dismiss();
         currentResult = null;
       }
     },

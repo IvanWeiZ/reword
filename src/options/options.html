@@ -37,90 +37,101 @@
       </select>
     </section>
 
-    <section>
-      <h2>Analyze Incoming Messages</h2>
-      <label class="toggle-label">
-        <input type="checkbox" id="analyze-incoming">
-        <span>Flag potentially problematic messages sent to you</span>
-      </label>
-    </section>
+    <details class="advanced-settings">
+      <summary>Advanced settings</summary>
 
-    <section>
-      <h2>Relationship Profiles</h2>
-      <div id="profiles-list"></div>
-      <div class="add-profile">
-        <input type="text" id="new-profile-domain" placeholder="Domain or contact (e.g. linkedin.com)">
-        <select id="new-profile-type">
-          <option value="romantic">Romantic</option>
-          <option value="workplace">Workplace</option>
-          <option value="family">Family</option>
-        </select>
-        <select id="new-profile-sensitivity">
-          <option value="">Default sensitivity</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-        <input type="text" id="new-profile-label" placeholder="Label (e.g. partner, boss)">
-        <button id="add-profile">Add</button>
-      </div>
-    </section>
+      <section>
+        <h2>Analyze Incoming Messages</h2>
+        <label class="toggle-label">
+          <input type="checkbox" id="analyze-incoming">
+          <span>Flag potentially problematic messages sent to you</span>
+        </label>
+      </section>
 
-    <section>
-      <h2>Custom Patterns</h2>
-      <p class="hint">Add regex patterns to flag in addition to built-in patterns.</p>
-      <div id="patterns-list"></div>
-      <div class="add-pattern">
-        <input type="text" id="new-pattern" placeholder="e.g. \bwhy would you\b">
-        <button id="add-pattern">Add</button>
-      </div>
-    </section>
+      <section>
+        <h2>Relationship Profiles</h2>
+        <div id="profiles-list"></div>
+        <div class="add-profile">
+          <input type="text" id="new-profile-domain" placeholder="Domain or contact (e.g. linkedin.com)">
+          <select id="new-profile-type">
+            <option value="romantic">Romantic</option>
+            <option value="workplace">Workplace</option>
+            <option value="family">Family</option>
+          </select>
+          <select id="new-profile-sensitivity">
+            <option value="">Default sensitivity</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+          <input type="text" id="new-profile-label" placeholder="Label (e.g. partner, boss)">
+          <button id="add-profile">Add</button>
+        </div>
+      </section>
 
-    <section>
-      <h2>Rewrite Personas</h2>
-      <p class="hint">Custom rewrite styles replace the default Warmer / Direct / Minimal options.</p>
-      <div id="personas-list"></div>
-      <div class="add-persona">
-        <input type="text" id="new-persona-label" placeholder="Label (e.g. Supportive friend)">
-        <input type="text" id="new-persona-instruction" placeholder="Instruction (e.g. Reply warmly like a close friend)">
-        <button id="add-persona">Add</button>
-      </div>
-    </section>
+      <section>
+        <h2>Custom Patterns</h2>
+        <p class="hint">Add regex patterns to flag in addition to built-in patterns.</p>
+        <div id="patterns-list"></div>
+        <div class="add-pattern">
+          <input type="text" id="new-pattern" placeholder="e.g. \bwhy would you\b">
+          <button id="add-pattern">Add</button>
+        </div>
+      </section>
 
-    <section>
-      <h2>Suppressed Phrases</h2>
-      <p class="hint">Phrases you've chosen to never flag again. Remove a phrase to re-enable flagging.</p>
-      <div id="suppressed-list"></div>
-    </section>
+      <section>
+        <h2>Rewrite Personas</h2>
+        <p class="hint">Custom rewrite styles replace the default Warmer / Direct / Minimal options.</p>
+        <div id="personas-list"></div>
+        <div class="add-persona">
+          <input type="text" id="new-persona-label" placeholder="Label (e.g. Supportive friend)">
+          <input type="text" id="new-persona-instruction" placeholder="Instruction (e.g. Reply warmly like a close friend)">
+          <button id="add-persona">Add</button>
+        </div>
+      </section>
 
-    <section>
-      <h2>Custom Domains</h2>
-      <p class="hint">Enable Reword on additional websites beyond Gmail, LinkedIn, Twitter, Slack, and Discord.</p>
-      <div id="domains-list"></div>
-      <div class="add-domain">
-        <input type="text" id="new-domain" placeholder="e.g. example.com">
-        <button id="add-domain">Add</button>
-      </div>
-    </section>
+      <section>
+        <h2>Suppressed Phrases</h2>
+        <p class="hint">Phrases you've chosen to never flag again. Remove a phrase to re-enable flagging.</p>
+        <div id="suppressed-list"></div>
+      </section>
 
-    <section>
-      <h2>Usage Stats</h2>
-      <div id="stats"></div>
-    </section>
+      <section>
+        <h2>Learned Preferences</h2>
+        <p class="hint">Reword learns which categories you frequently dismiss and adjusts sensitivity. Reset to start fresh.</p>
+        <div id="learned-preferences"></div>
+        <button id="reset-learned-preferences" class="btn-secondary">Reset learned preferences</button>
+      </section>
 
-    <section>
-      <h2>Tone History</h2>
-      <div id="history"></div>
-    </section>
+      <section>
+        <h2>Custom Domains</h2>
+        <p class="hint">Enable Reword on additional websites beyond Gmail, LinkedIn, Twitter, Slack, and Discord.</p>
+        <div id="domains-list"></div>
+        <div class="add-domain">
+          <input type="text" id="new-domain" placeholder="e.g. example.com">
+          <button id="add-domain">Add</button>
+        </div>
+      </section>
 
-    <section>
-      <h2>Data</h2>
-      <div class="field">
-        <button id="export-data">Export Settings</button>
-        <button id="import-data" class="btn-secondary">Import Settings</button>
-        <input type="file" id="import-file" accept=".json" style="display:none">
-      </div>
-    </section>
+      <section>
+        <h2>Usage Stats</h2>
+        <div id="stats"></div>
+      </section>
+
+      <section>
+        <h2>Tone History</h2>
+        <div id="history"></div>
+      </section>
+
+      <section>
+        <h2>Data</h2>
+        <div class="field">
+          <button id="export-data">Export Settings</button>
+          <button id="import-data" class="btn-secondary">Import Settings</button>
+          <input type="file" id="import-file" accept=".json" style="display:none">
+        </div>
+      </section>
+    </details>
   </div>
   <script src="../options.js"></script>
 </body>

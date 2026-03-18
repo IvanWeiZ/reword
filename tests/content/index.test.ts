@@ -149,7 +149,8 @@ describe('content script init() orchestration', () => {
   const mockScoreMessage = vi.fn<(text: string, patterns?: string[]) => number>();
   const mockObserve = vi.fn();
   const mockDisconnect = vi.fn();
-  let capturedOnAnalyze: ((text: string) => Promise<void>) | null = null;
+  let capturedOnHeuristic: ((text: string) => void) | null = null;
+  let capturedOnAiAnalyze: ((text: string) => Promise<void>) | null = null;
 
   const mockTriggerShow = vi.fn();
   const mockTriggerHide = vi.fn();
@@ -159,6 +160,7 @@ describe('content script init() orchestration', () => {
   const mockPopupHide = vi.fn();
   const mockPopupShowStreaming = vi.fn();
   const mockPopupSetTheme = vi.fn();
+  const mockPopupPositionNear = vi.fn();
   const mockPopupElement = document.createElement('div');
 
   const mockFindInputField = vi.fn<() => HTMLElement | null>();
@@ -183,11 +185,13 @@ describe('content script init() orchestration', () => {
     mockPopupHide.mockReset();
     mockPopupShowStreaming.mockReset();
     mockPopupSetTheme.mockReset();
+    mockPopupPositionNear.mockReset();
     mockFindInputField.mockReset();
     mockPlaceTriggerIcon.mockReset();
     mockWriteBack.mockReset();
     mockScrapeThreadContext.mockReset().mockReturnValue([]);
-    capturedOnAnalyze = null;
+    capturedOnHeuristic = null;
+    capturedOnAiAnalyze = null;
 
     // Default: no input field found (tests can override)
     mockFindInputField.mockReturnValue(null);
@@ -242,8 +246,12 @@ describe('content script init() orchestration', () => {
           disconnect = self.disconnect;
           currentElement = self.currentElement;
           generation = self.generation;
-          constructor(opts: { onAnalyze: (text: string) => void }) {
-            capturedOnAnalyze = opts.onAnalyze as (text: string) => Promise<void>;
+          constructor(opts: {
+            onHeuristic: (text: string) => void;
+            onAiAnalyze: (text: string) => void;
+          }) {
+            capturedOnHeuristic = opts.onHeuristic;
+            capturedOnAiAnalyze = opts.onAiAnalyze as (text: string) => Promise<void>;
           }
         },
       };
@@ -264,6 +272,7 @@ describe('content script init() orchestration', () => {
         hide = mockPopupHide;
         showStreaming = mockPopupShowStreaming;
         setTheme = mockPopupSetTheme;
+        positionNear = mockPopupPositionNear;
         element = mockPopupElement;
         constructor(_opts: unknown) {}
       },
@@ -309,7 +318,7 @@ describe('content script init() orchestration', () => {
   describe('generation tracking', () => {
     it('discards stale analysis responses when a newer analysis has started', async () => {
       await loadContentScript();
-      expect(capturedOnAnalyze).not.toBeNull();
+      expect(capturedOnAiAnalyze).not.toBeNull();
 
       // Mock scoreMessage to return above threshold
       mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.1);
@@ -320,7 +329,7 @@ describe('content script init() orchestration', () => {
         () => new Promise<MessageFromBackground>((r) => (resolveFirst = r)),
       );
 
-      const firstPromise = capturedOnAnalyze!('This is rude and terrible!!');
+      const firstPromise = capturedOnAiAnalyze!('This is rude and terrible!!');
 
       // Second analysis starts immediately (simulates user typing again)
       sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
@@ -332,7 +341,7 @@ describe('content script init() orchestration', () => {
         return settingsResponse();
       });
 
-      const secondPromise = capturedOnAnalyze!('Another rude and terrible message!!');
+      const secondPromise = capturedOnAiAnalyze!('Another rude and terrible message!!');
 
       // Now resolve the first (stale) check-suppressed
       resolveFirst(suppressionResponse(false));
@@ -351,28 +360,35 @@ describe('content script init() orchestration', () => {
   // --- Test 3: Heuristic score below threshold hides trigger ---
 
   describe('heuristic scoring', () => {
-    it('hides the trigger when heuristic score is below threshold', async () => {
+    it('hides the trigger when heuristic score is below threshold (stage 1)', async () => {
       await loadContentScript();
-      expect(capturedOnAnalyze).not.toBeNull();
+      expect(capturedOnHeuristic).not.toBeNull();
 
       // Mock scoreMessage to return below threshold
       mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD - 0.1);
 
-      await capturedOnAnalyze!('Hello, how are you doing today?');
+      capturedOnHeuristic!('Hello, how are you doing today?');
 
       expect(mockTriggerHide).toHaveBeenCalled();
-      // Should NOT have sent an analyze message to background
-      const analyzeCalls = sendMessageMock.mock.calls.filter(
-        ([msg]) => (msg as MessageToBackground).type === 'analyze',
-      );
-      expect(analyzeCalls).toHaveLength(0);
     });
 
-    // --- Test 4: Heuristic score above threshold shows trigger ---
-
-    it('shows the trigger when heuristic score is above threshold and analysis flags the message', async () => {
+    it('shows the trigger badge immediately when heuristic flags (stage 1)', async () => {
       await loadContentScript();
-      expect(capturedOnAnalyze).not.toBeNull();
+      expect(capturedOnHeuristic).not.toBeNull();
+
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
+
+      capturedOnHeuristic!('Per my last email, whatever you say is fine.');
+
+      // Stage 1 shows trigger with preliminary 'low' risk level
+      expect(mockTriggerShow).toHaveBeenCalledWith('low');
+    });
+
+    // --- Test 4: AI analysis refines trigger after stage 2 ---
+
+    it('shows the trigger with AI risk level when analysis flags the message (stage 2)', async () => {
+      await loadContentScript();
+      expect(capturedOnAiAnalyze).not.toBeNull();
 
       mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
 
@@ -386,7 +402,7 @@ describe('content script init() orchestration', () => {
         return settingsResponse();
       });
 
-      await capturedOnAnalyze!('Per my last email, whatever you say is fine.');
+      await capturedOnAiAnalyze!('Per my last email, whatever you say is fine.');
       await vi.runAllTimersAsync();
 
       expect(mockTriggerShow).toHaveBeenCalledWith('medium');
@@ -394,9 +410,9 @@ describe('content script init() orchestration', () => {
       expect(mockPopupHide).toHaveBeenCalled(); // popup hides after result arrives
     });
 
-    it('hides trigger when analysis does not flag the message', async () => {
+    it('hides trigger when AI analysis does not flag the message (stage 2)', async () => {
       await loadContentScript();
-      expect(capturedOnAnalyze).not.toBeNull();
+      expect(capturedOnAiAnalyze).not.toBeNull();
 
       vi.spyOn(await import('../../src/content/heuristic-scorer'), 'scoreMessage').mockReturnValue(
         HEURISTIC_THRESHOLD + 0.2,
@@ -410,11 +426,10 @@ describe('content script init() orchestration', () => {
         return settingsResponse();
       });
 
-      await capturedOnAnalyze!('Some text that passes heuristic but not AI');
+      await capturedOnAiAnalyze!('Some text that passes heuristic but not AI');
       await vi.runAllTimersAsync();
 
       expect(mockTriggerHide).toHaveBeenCalled();
-      expect(mockTriggerShow).not.toHaveBeenCalled();
     });
   });
 
@@ -466,13 +481,13 @@ describe('content script init() orchestration', () => {
 
     it('sends analyze message with correct payload when heuristic triggers', async () => {
       await loadContentScript();
-      expect(capturedOnAnalyze).not.toBeNull();
+      expect(capturedOnAiAnalyze).not.toBeNull();
 
       vi.spyOn(await import('../../src/content/heuristic-scorer'), 'scoreMessage').mockReturnValue(
         HEURISTIC_THRESHOLD + 0.2,
       );
 
-      await capturedOnAnalyze!('This is stupid and ridiculous!!');
+      await capturedOnAiAnalyze!('This is stupid and ridiculous!!');
       await vi.runAllTimersAsync();
 
       const analyzeCalls = sendMessageMock.mock.calls.filter(
@@ -487,13 +502,13 @@ describe('content script init() orchestration', () => {
 
     it('sends check-suppressed message before analyzing', async () => {
       await loadContentScript();
-      expect(capturedOnAnalyze).not.toBeNull();
+      expect(capturedOnAiAnalyze).not.toBeNull();
 
       vi.spyOn(await import('../../src/content/heuristic-scorer'), 'scoreMessage').mockReturnValue(
         HEURISTIC_THRESHOLD + 0.2,
       );
 
-      await capturedOnAnalyze!('Whatever, fine. Thanks for nothing.');
+      await capturedOnAiAnalyze!('Whatever, fine. Thanks for nothing.');
       await vi.runAllTimersAsync();
 
       const suppressCalls = sendMessageMock.mock.calls.filter(
@@ -504,7 +519,7 @@ describe('content script init() orchestration', () => {
 
     it('skips analysis when message is suppressed', async () => {
       await loadContentScript();
-      expect(capturedOnAnalyze).not.toBeNull();
+      expect(capturedOnAiAnalyze).not.toBeNull();
 
       vi.spyOn(await import('../../src/content/heuristic-scorer'), 'scoreMessage').mockReturnValue(
         HEURISTIC_THRESHOLD + 0.2,
@@ -518,7 +533,7 @@ describe('content script init() orchestration', () => {
         return settingsResponse();
       });
 
-      await capturedOnAnalyze!('Whatever, this is fine.');
+      await capturedOnAiAnalyze!('Whatever, this is fine.');
       await vi.runAllTimersAsync();
 
       expect(mockTriggerHide).toHaveBeenCalled();
@@ -530,7 +545,7 @@ describe('content script init() orchestration', () => {
 
     it('sends record-flag message after a flagged analysis', async () => {
       await loadContentScript();
-      expect(capturedOnAnalyze).not.toBeNull();
+      expect(capturedOnAiAnalyze).not.toBeNull();
 
       vi.spyOn(await import('../../src/content/heuristic-scorer'), 'scoreMessage').mockReturnValue(
         HEURISTIC_THRESHOLD + 0.2,
@@ -545,7 +560,7 @@ describe('content script init() orchestration', () => {
         return settingsResponse();
       });
 
-      await capturedOnAnalyze!('This is stupid and pathetic!!');
+      await capturedOnAiAnalyze!('This is stupid and pathetic!!');
       await vi.runAllTimersAsync();
 
       const flagCalls = sendMessageMock.mock.calls.filter(

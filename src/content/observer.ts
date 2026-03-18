@@ -1,12 +1,15 @@
 interface ObserverOptions {
   debounceMs: number;
+  aiDebounceMs: number;
   minLength: number;
-  onAnalyze: (text: string) => void;
+  onHeuristic: (text: string) => void;
+  onAiAnalyze: (text: string) => void;
 }
 
 export class InputObserver {
   private options: ObserverOptions;
-  private timer: ReturnType<typeof setTimeout> | null = null;
+  private heuristicTimer: ReturnType<typeof setTimeout> | null = null;
+  private aiTimer: ReturnType<typeof setTimeout> | null = null;
   private element: HTMLElement | null = null;
   private handler: ((e: Event) => void) | null = null;
   generation = 0;
@@ -21,13 +24,21 @@ export class InputObserver {
 
     this.handler = () => {
       this.generation++;
-      if (this.timer) clearTimeout(this.timer);
+      if (this.heuristicTimer) clearTimeout(this.heuristicTimer);
+      if (this.aiTimer) clearTimeout(this.aiTimer);
 
-      this.timer = setTimeout(() => {
-        const text = this.getText();
-        if (text.length < this.options.minLength) return;
-        this.options.onAnalyze(text);
+      const text = this.getText();
+      if (text.length < this.options.minLength) return;
+
+      // Stage 1: fast heuristic after short debounce
+      this.heuristicTimer = setTimeout(() => {
+        this.options.onHeuristic(text);
       }, this.options.debounceMs);
+
+      // Stage 2: AI analysis after longer debounce
+      this.aiTimer = setTimeout(() => {
+        this.options.onAiAnalyze(text);
+      }, this.options.aiDebounceMs);
     };
 
     element.addEventListener('input', this.handler);
@@ -41,8 +52,10 @@ export class InputObserver {
     if (this.element && this.handler) {
       this.element.removeEventListener('input', this.handler);
     }
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = null;
+    if (this.heuristicTimer) clearTimeout(this.heuristicTimer);
+    if (this.aiTimer) clearTimeout(this.aiTimer);
+    this.heuristicTimer = null;
+    this.aiTimer = null;
     this.element = null;
     this.handler = null;
   }

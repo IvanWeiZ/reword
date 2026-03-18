@@ -5,11 +5,45 @@ import {
   ONDEVICE_CONFIDENCE_THRESHOLD,
   MAX_RECENT_FLAGS,
   DISMISS_SUPPRESS_THRESHOLD,
+  CATEGORY_BOOST_AMOUNT,
 } from '../shared/constants';
-import type { MessageToBackground, MessageFromBackground } from '../shared/types';
+import type { MessageToBackground, MessageFromBackground, StoredData } from '../shared/types';
 
 const gemini = new GeminiClient();
 const ondevice = new OnDeviceClient();
+
+/** Returns the ISO date string (YYYY-MM-DD) of the Monday starting the current week. */
+export function getMondayOfWeek(date: Date = new Date()): string {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const diff = day === 0 ? -6 : 1 - day; // adjust to Monday
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Checks if the weekly stats period has rolled over (new Monday).
+ * If so, archives current stats as previousWeeklyStats and resets current.
+ */
+export async function checkWeeklyReset(data: StoredData): Promise<boolean> {
+  const currentMonday = getMondayOfWeek();
+  if (data.weeklyStats.weekStart !== currentMonday) {
+    // Archive current week stats if they have data
+    if (data.weeklyStats.weekStart !== '') {
+      data.previousWeeklyStats = { ...data.weeklyStats };
+    }
+    // Reset for the new week
+    data.weeklyStats = {
+      weekStart: currentMonday,
+      analyzed: 0,
+      flagged: 0,
+      rewritesAccepted: 0,
+    };
+    await saveStoredData(data);
+    return true;
+  }
+  return false;
+}
 
 export async function handleMessage(message: MessageToBackground): Promise<MessageFromBackground> {
   switch (message.type) {
@@ -31,7 +65,12 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
 
     case 'increment-stat': {
       const data = await loadStoredData();
+      await checkWeeklyReset(data);
       data.stats[message.stat]++;
+      // Mirror relevant stats to weekly tracking
+      if (message.stat === 'totalAnalyzed') data.weeklyStats.analyzed++;
+      if (message.stat === 'totalFlagged') data.weeklyStats.flagged++;
+      if (message.stat === 'rewritesAccepted') data.weeklyStats.rewritesAccepted++;
       await saveStoredData(data);
       return { type: 'settings', data };
     }
@@ -62,6 +101,13 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
           count: 1,
           suppressed: false,
         });
+      }
+      // Adaptive false positive reduction: track dismiss counts per category
+      if (message.categories && message.categories.length > 0) {
+        for (const category of message.categories) {
+          data.stats.dismissedCategories[category] =
+            (data.stats.dismissedCategories[category] ?? 0) + 1;
+        }
       }
       await saveStoredData(data);
       return { type: 'settings', data };
@@ -98,6 +144,25 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
       data.settings.suppressedPhrases = data.settings.suppressedPhrases.filter(
         (p) => p !== message.text,
       );
+      await saveStoredData(data);
+      return { type: 'settings', data };
+    }
+
+    case 'get-category-boosts': {
+      // Adaptive false positive reduction: compute per-category threshold boosts
+      const data = await loadStoredData();
+      const boosts: Record<string, number> = {};
+      for (const [category, count] of Object.entries(data.stats.dismissedCategories)) {
+        if (count >= DISMISS_SUPPRESS_THRESHOLD) {
+          boosts[category] = CATEGORY_BOOST_AMOUNT;
+        }
+      }
+      return { type: 'category-boosts', boosts };
+    }
+
+    case 'reset-learned-preferences': {
+      const data = await loadStoredData();
+      data.stats.dismissedCategories = {};
       await saveStoredData(data);
       return { type: 'settings', data };
     }
@@ -157,8 +222,10 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
           return { type: 'analysis-error', error: 'Gemini API key not configured' };
         }
 
+        await checkWeeklyReset(data);
         data.stats.totalAnalyzed++;
         data.stats.monthlyApiCalls++;
+        data.weeklyStats.analyzed++;
         await saveStoredData(data);
 
         const result = await gemini.analyze(
@@ -174,6 +241,7 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
 
         if (result.shouldFlag) {
           data.stats.totalFlagged++;
+          data.weeklyStats.flagged++;
           await saveStoredData(data);
         }
 

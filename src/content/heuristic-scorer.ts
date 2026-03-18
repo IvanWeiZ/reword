@@ -90,8 +90,15 @@ const NEGATIVE_KEYWORDS: { keyword: string; weight: number }[] = [
  * that multiple distinct passive-aggressive phrases are worse than one.
  *
  * @param customPatterns Optional user-defined regex strings from settings.
+ * @param categoryBoosts Optional per-category threshold boosts from adaptive learning.
+ *   Keys are category names (e.g. "passive-aggressive", "sarcasm", "hedging").
+ *   Values are added to the threshold for that category, making it harder to trigger.
  */
-export function scoreMessage(text: string, customPatterns: string[] = []): number {
+export function scoreMessage(
+  text: string,
+  customPatterns: string[] = [],
+  categoryBoosts: Record<string, number> = {},
+): number {
   if (!text || text.trim().length === 0) return 0;
 
   let patternScore = 0;
@@ -189,6 +196,20 @@ export function scoreMessage(text: string, customPatterns: string[] = []): numbe
       }
     }
   }
+
+  // Apply category boosts (adaptive learning): subtract boost from each category score
+  // This effectively raises the threshold for categories the user frequently dismisses
+  patternScore = Math.max(0, patternScore - (categoryBoosts['passive-aggressive'] ?? 0));
+  keywordScore = Math.max(0, keywordScore - (categoryBoosts['keywords'] ?? 0));
+  capsScore = Math.max(0, capsScore - (categoryBoosts['caps'] ?? 0));
+  punctuationScore = Math.max(0, punctuationScore - (categoryBoosts['punctuation'] ?? 0));
+  sarcasmScore = Math.max(0, sarcasmScore - (categoryBoosts['sarcasm'] ?? 0));
+  hedgingScore = Math.max(0, hedgingScore - (categoryBoosts['hedging'] ?? 0));
+  exclamationInflationScore = Math.max(
+    0,
+    exclamationInflationScore - (categoryBoosts['exclamation-inflation'] ?? 0),
+  );
+  customScore = Math.max(0, customScore - (categoryBoosts['custom'] ?? 0));
 
   return Math.min(
     1,

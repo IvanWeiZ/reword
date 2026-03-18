@@ -3,6 +3,7 @@ export const COOLDOWN_THRESHOLD = 3;
 
 export class CooldownTracker {
   private timestamps: number[] = [];
+  private shownThisSession = false;
 
   recordAnalysis(): void {
     const now = Date.now();
@@ -11,9 +12,14 @@ export class CooldownTracker {
   }
 
   shouldSuggestCooldown(): boolean {
+    if (this.shownThisSession) return false;
     const now = Date.now();
     this.cleanup(now);
     return this.timestamps.length >= COOLDOWN_THRESHOLD;
+  }
+
+  markShown(): void {
+    this.shownThisSession = true;
   }
 
   private cleanup(now: number): void {

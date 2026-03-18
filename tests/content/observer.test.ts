@@ -3,15 +3,23 @@ import { InputObserver } from '../../src/content/observer';
 
 describe('InputObserver', () => {
   let observer: InputObserver;
-  let onAnalyze: ReturnType<typeof vi.fn>;
+  let onHeuristic: ReturnType<typeof vi.fn>;
+  let onAiAnalyze: ReturnType<typeof vi.fn>;
   let textarea: HTMLTextAreaElement;
 
   beforeEach(() => {
     vi.useFakeTimers();
     textarea = document.createElement('textarea');
     document.body.appendChild(textarea);
-    onAnalyze = vi.fn();
-    observer = new InputObserver({ debounceMs: 2000, minLength: 10, onAnalyze });
+    onHeuristic = vi.fn();
+    onAiAnalyze = vi.fn();
+    observer = new InputObserver({
+      debounceMs: 800,
+      aiDebounceMs: 2000,
+      minLength: 15,
+      onHeuristic,
+      onAiAnalyze,
+    });
   });
 
   afterEach(() => {
@@ -22,37 +30,58 @@ describe('InputObserver', () => {
 
   it('does not fire for short messages', () => {
     observer.observe(textarea);
-    textarea.value = 'hi';
+    textarea.value = 'hi there';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     vi.advanceTimersByTime(3000);
-    expect(onAnalyze).not.toHaveBeenCalled();
+    expect(onHeuristic).not.toHaveBeenCalled();
+    expect(onAiAnalyze).not.toHaveBeenCalled();
   });
 
-  it('fires after debounce for long messages', () => {
+  it('fires heuristic callback after short debounce', () => {
+    observer.observe(textarea);
+    textarea.value = 'This is a longer message that should be analyzed';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    vi.advanceTimersByTime(800);
+    expect(onHeuristic).toHaveBeenCalledWith(
+      'This is a longer message that should be analyzed',
+    );
+    expect(onAiAnalyze).not.toHaveBeenCalled();
+  });
+
+  it('fires AI callback after longer debounce', () => {
     observer.observe(textarea);
     textarea.value = 'This is a longer message that should be analyzed';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     vi.advanceTimersByTime(2000);
-    expect(onAnalyze).toHaveBeenCalledWith('This is a longer message that should be analyzed');
+    expect(onHeuristic).toHaveBeenCalledWith(
+      'This is a longer message that should be analyzed',
+    );
+    expect(onAiAnalyze).toHaveBeenCalledWith(
+      'This is a longer message that should be analyzed',
+    );
   });
 
-  it('resets debounce on continued typing', () => {
+  it('resets both debounces on continued typing', () => {
     observer.observe(textarea);
-    textarea.value = 'This is a longer message';
+    textarea.value = 'This is a longer message here';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(500);
     textarea.value = 'This is a longer message that changed';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    vi.advanceTimersByTime(1000);
-    expect(onAnalyze).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1000);
-    expect(onAnalyze).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(500);
+    expect(onHeuristic).not.toHaveBeenCalled();
+    expect(onAiAnalyze).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(300);
+    expect(onHeuristic).toHaveBeenCalledTimes(1);
+    expect(onAiAnalyze).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1200);
+    expect(onAiAnalyze).toHaveBeenCalledTimes(1);
   });
 
   it('increments generation on each input change', () => {
     observer.observe(textarea);
     expect(observer.generation).toBe(0);
-    textarea.value = 'Some text here that is long enough';
+    textarea.value = 'Some text here that is definitely long enough';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     expect(observer.generation).toBe(1);
   });

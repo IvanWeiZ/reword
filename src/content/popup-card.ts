@@ -17,6 +17,12 @@ const RISK_COLORS = {
   high: '#ef5350',
 };
 
+const RISK_LABELS: Record<string, string> = {
+  low: 'Subtle',
+  medium: 'Moderate',
+  high: 'Strong',
+};
+
 export class PopupCard {
   element: HTMLElement;
   private options: PopupCardOptions;
@@ -80,7 +86,7 @@ export class PopupCard {
     const shadow = dark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.15)';
 
     return `
-      .reword-card { position: fixed; bottom: 80px; right: 24px; width: 400px; max-height: 80vh; overflow-y: auto; background: ${bg}; color: ${text}; border-radius: 12px; box-shadow: 0 8px 32px ${shadow}; padding: 20px; z-index: 99999; font-size: 14px; line-height: 1.5; font-family: system-ui, -apple-system, sans-serif; }
+      .reword-card { position: fixed; width: 400px; max-height: 80vh; overflow-y: auto; background: ${bg}; color: ${text}; border-radius: 12px; box-shadow: 0 8px 32px ${shadow}; padding: 20px; z-index: 99999; font-size: 14px; line-height: 1.5; font-family: system-ui, -apple-system, sans-serif; }
       .reword-risk-indicator { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 13px; font-weight: 600; }
       .reword-risk-dot { width: 10px; height: 10px; border-radius: 50%; }
       .reword-original { background: ${cardBg}; padding: 12px; border-radius: 6px; margin-bottom: 16px; border-left: 3px solid ${muted}; }
@@ -96,7 +102,9 @@ export class PopupCard {
       .reword-rewrite-label { font-size: 11px; font-weight: 600; margin-bottom: 4px; color: ${muted}; }
       .reword-rewrite-shortcut { position: absolute; top: 8px; right: 10px; font-size: 10px; color: ${muted}; opacity: 0.6; }
       .reword-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
-      .reword-send-original, .reword-cancel { padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; background: none; border: none; color: ${muted}; }
+      .reword-send-original { padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; background: ${cardBg}; border: 1px solid ${border}; color: ${text}; }
+      .reword-send-original:hover { border-color: #6366f1; }
+      .reword-cancel { padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; background: none; border: none; color: ${muted}; }
       .reword-undo-toast { position: fixed; bottom: 24px; right: 24px; background: ${cardBg}; color: ${text}; padding: 10px 16px; border-radius: 8px; box-shadow: 0 4px 16px ${shadow}; z-index: 100000; display: flex; gap: 12px; align-items: center; font-size: 13px; font-family: system-ui; }
       .reword-undo-btn { background: #6366f1; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
       .reword-shortcut-hint { font-size: 11px; color: ${muted}; text-align: center; margin-top: 8px; opacity: 0.7; }
@@ -125,11 +133,14 @@ export class PopupCard {
     this.cooldownTracker.recordAnalysis();
     const dotColor = RISK_COLORS[result.riskLevel];
 
-    const cooldownBanner =
-      !this.cooldownDismissed && this.cooldownTracker.shouldSuggestCooldown()
+    const shouldShowCooldown = !this.cooldownDismissed && this.cooldownTracker.shouldSuggestCooldown();
+    if (shouldShowCooldown) {
+      this.cooldownTracker.markShown();
+    }
+    const cooldownBanner = shouldShowCooldown
         ? `<div class="reword-cooldown-banner">
-            <span>You've sent several flagged messages in the last 5 minutes. Consider taking a short break before replying.</span>
-            <button class="reword-cooldown-dismiss">I'm good</button>
+            <span>You're on a roll — want to review your recent messages before continuing?</span>
+            <button class="reword-cooldown-dismiss">Continue</button>
           </div>`
         : '';
 
@@ -137,7 +148,7 @@ export class PopupCard {
       ${cooldownBanner}
       <div class="reword-risk-indicator">
         <span class="reword-risk-dot" style="background:${dotColor}"></span>
-        <span>${this.cap(result.riskLevel)} risk — ${this.esc(result.explanation)}</span>
+        <span>${RISK_LABELS[result.riskLevel] ?? this.cap(result.riskLevel)} — This might read as ${this.esc(result.explanation)}. Here are some alternatives:</span>
       </div>
       <div class="reword-original">
         <div class="reword-original-label">Your message</div>
@@ -160,7 +171,7 @@ export class PopupCard {
       </div>
       <div class="reword-shortcut-hint">Press ⌥1–${result.rewrites.length} to quick-accept · Enter to send original · Esc to close</div>
       <div class="reword-actions">
-        <button class="reword-send-original">Send original <span class="reword-rewrite-shortcut">Enter</span></button>
+        <button class="reword-send-original">Keep original <span class="reword-rewrite-shortcut">Enter</span></button>
         <button class="reword-cancel">Cancel <span class="reword-rewrite-shortcut">Esc</span></button>
       </div>
       <button class="reword-suppress-link">Don't flag this again</button>
@@ -192,6 +203,79 @@ export class PopupCard {
     this.element.style.display = 'none';
     this.streamingEl = null;
     this.removeKeyboardShortcuts();
+  }
+
+  /**
+   * Position the popup card near a target element (e.g. the trigger badge or compose field).
+   * Places the card above or below the element, aligned to its right edge.
+   * Falls back to bottom-right corner if the target is not in the DOM.
+   */
+  positionNear(target: HTMLElement): void {
+    const CARD_WIDTH = 400;
+    const MARGIN = 8;
+
+    // Fall back to fixed bottom-right if target is detached
+    if (!document.body.contains(target)) {
+      this.element.style.bottom = '80px';
+      this.element.style.right = '24px';
+      this.element.style.top = '';
+      this.element.style.left = '';
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    // Measure the card height (temporarily show off-screen to measure)
+    this.element.style.top = '-9999px';
+    this.element.style.left = '-9999px';
+    this.element.style.bottom = '';
+    this.element.style.right = '';
+    const prevDisplay = this.element.style.display;
+    this.element.style.display = 'block';
+    const cardH = this.element.offsetHeight;
+    this.element.style.display = prevDisplay;
+
+    // Vertical: prefer above the target, fall back to below
+    let top: number;
+    const spaceAbove = rect.top;
+    const spaceBelow = viewportH - rect.bottom;
+
+    if (spaceAbove >= cardH + MARGIN) {
+      top = rect.top - cardH - MARGIN;
+    } else if (spaceBelow >= cardH + MARGIN) {
+      top = rect.bottom + MARGIN;
+    } else {
+      // Not enough space either way — place below and let it scroll
+      top = rect.bottom + MARGIN;
+    }
+
+    // Horizontal: align right edge of card to right edge of target
+    let left = rect.right - CARD_WIDTH;
+
+    // If that overflows left, align to left edge instead
+    if (left < MARGIN) {
+      left = MARGIN;
+    }
+
+    // If card overflows right, clamp
+    if (left + CARD_WIDTH > viewportW - MARGIN) {
+      left = viewportW - CARD_WIDTH - MARGIN;
+    }
+
+    // Clamp top to stay in viewport
+    if (top < MARGIN) {
+      top = MARGIN;
+    }
+    if (top + cardH > viewportH - MARGIN) {
+      top = viewportH - cardH - MARGIN;
+    }
+
+    this.element.style.top = `${top}px`;
+    this.element.style.left = `${left}px`;
+    this.element.style.bottom = '';
+    this.element.style.right = '';
   }
 
   private buildHealthFooter(): string {

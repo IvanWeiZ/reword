@@ -110,6 +110,106 @@ describe('PopupCard', () => {
     expect(cancelBtn?.textContent).toContain('Esc');
   });
 
+  // positionNear()
+  it('positions popup near the target element based on bounding rect', () => {
+    // Create a target element with a known bounding rect
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    // Mock getBoundingClientRect on the target
+    target.getBoundingClientRect = () => ({
+      top: 300,
+      bottom: 330,
+      left: 500,
+      right: 700,
+      width: 200,
+      height: 30,
+      x: 500,
+      y: 300,
+      toJSON: () => ({}),
+    });
+
+    // Mock viewport dimensions
+    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 768, writable: true });
+
+    // The card needs to report a height for the measurement logic
+    Object.defineProperty(card.element, 'offsetHeight', { value: 200, configurable: true });
+
+    card.positionNear(target);
+
+    // Should be positioned above the target (300 - 200 - 8 = 92)
+    expect(card.element.style.top).toBe('92px');
+    // Right-aligned to target: 700 - 400 = 300
+    expect(card.element.style.left).toBe('300px');
+    // Should have cleared bottom/right
+    expect(card.element.style.bottom).toBe('');
+    expect(card.element.style.right).toBe('');
+  });
+
+  it('positions popup below target when not enough space above', () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    target.getBoundingClientRect = () => ({
+      top: 50,
+      bottom: 80,
+      left: 500,
+      right: 700,
+      width: 200,
+      height: 30,
+      x: 500,
+      y: 50,
+      toJSON: () => ({}),
+    });
+
+    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 768, writable: true });
+    Object.defineProperty(card.element, 'offsetHeight', { value: 200, configurable: true });
+
+    card.positionNear(target);
+
+    // Not enough space above (50 < 200+8), so place below: 80 + 8 = 88
+    expect(card.element.style.top).toBe('88px');
+  });
+
+  it('falls back to fixed bottom-right when target is not in DOM', () => {
+    const detached = document.createElement('div');
+    // detached is not appended to document.body
+
+    card.positionNear(detached);
+
+    expect(card.element.style.bottom).toBe('80px');
+    expect(card.element.style.right).toBe('24px');
+  });
+
+  it('clamps popup left edge when it would overflow left', () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    // Target near left edge — right edge at 100, so 100-400 = -300 which is < 8
+    target.getBoundingClientRect = () => ({
+      top: 300,
+      bottom: 330,
+      left: 10,
+      right: 100,
+      width: 90,
+      height: 30,
+      x: 10,
+      y: 300,
+      toJSON: () => ({}),
+    });
+
+    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 768, writable: true });
+    Object.defineProperty(card.element, 'offsetHeight', { value: 200, configurable: true });
+
+    card.positionNear(target);
+
+    // Should clamp to MARGIN (8)
+    expect(card.element.style.left).toBe('8px');
+  });
+
   it('shows shortcut hints (#2)', () => {
     card.show(MOCK_FLAGGED_RESULT, 'Whatever');
     expect(card.element.querySelector('.reword-shortcut-hint')?.textContent).toContain('1\u20133');

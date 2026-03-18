@@ -27,7 +27,7 @@ test.describe('full analysis flow', () => {
     await page.waitForTimeout(3500);
 
     // Trigger badge should appear
-    const trigger = page.locator('text=Review tone');
+    const trigger = page.locator('text=Rewrite available');
     await expect(trigger).toBeVisible({ timeout: 5000 });
 
     // Click trigger to open popup
@@ -57,14 +57,14 @@ test.describe('full analysis flow', () => {
     await input.type('Whatever, I guess that works. Not like I had plans or anything.');
     await page.waitForTimeout(3500);
 
-    const trigger = page.locator('text=Review tone');
+    const trigger = page.locator('text=Rewrite available');
     await expect(trigger).toBeVisible({ timeout: 5000 });
     await trigger.click();
 
     const popup = page.locator('.reword-card');
     await expect(popup).toBeVisible({ timeout: 10000 });
 
-    // Click "Send original"
+    // Click "Keep original"
     await popup.locator('.reword-send-original').click();
     await expect(popup).not.toBeVisible();
 
@@ -81,7 +81,7 @@ test.describe('full analysis flow', () => {
     await page.waitForTimeout(3500);
 
     // The heuristic should flag this
-    const trigger = page.locator('text=Review tone');
+    const trigger = page.locator('text=Rewrite available');
     await expect(trigger).toBeVisible({ timeout: 5000 });
 
     await page.close();
@@ -96,7 +96,7 @@ test.describe('full analysis flow', () => {
     await input.type('Whatever, I guess that works. Not like I had plans or anything.');
     await page.waitForTimeout(3500);
 
-    const trigger = page.locator('text=Review tone');
+    const trigger = page.locator('text=Rewrite available');
     await expect(trigger).toBeVisible({ timeout: 5000 });
 
     await page.close();

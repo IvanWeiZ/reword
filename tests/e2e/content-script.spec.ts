@@ -28,7 +28,7 @@ test.describe('content script injection', () => {
     await page.waitForTimeout(3000);
 
     // The trigger badge should appear for problematic messages
-    const trigger = page.locator('text=Review tone');
+    const trigger = page.locator('text=Rewrite available');
     // Note: this depends on the heuristic scoring threshold
     await expect(trigger).toBeVisible({ timeout: 5000 });
 
@@ -44,7 +44,7 @@ test.describe('content script injection', () => {
     await input.type('Thanks for your help, I really appreciate it!');
     await page.waitForTimeout(3000);
 
-    const trigger = page.locator('text=Review tone');
+    const trigger = page.locator('text=Rewrite available');
     await expect(trigger).not.toBeVisible();
 
     await page.close();
@@ -59,7 +59,7 @@ test.describe('content script injection', () => {
     await input.type('Whatever, I guess that works. Not like I had plans or anything.');
     await page.waitForTimeout(3000);
 
-    const trigger = page.locator('text=Review tone');
+    const trigger = page.locator('text=Rewrite available');
     await trigger.click();
 
     const popup = page.locator('.reword-card');
@@ -84,7 +84,7 @@ test.describe('content script injection', () => {
     await input.type('Whatever, I guess that works. Not like I had plans or anything.');
     await page.waitForTimeout(3000);
 
-    const trigger = page.locator('text=Review tone');
+    const trigger = page.locator('text=Rewrite available');
     await trigger.click();
 
     const popup = page.locator('.reword-card');

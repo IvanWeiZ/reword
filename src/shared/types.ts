@@ -2,12 +2,22 @@
 
 // --- Storage types ---
 
+export interface WeeklyStats {
+  weekStart: string;
+  analyzed: number;
+  flagged: number;
+  rewritesAccepted: number;
+}
+
 export interface StoredData {
   schemaVersion: number;
   settings: Settings;
   relationshipProfiles: Record<string, RelationshipProfile>;
   stats: Stats;
   dismissedPatterns: DismissedPattern[];
+  weeklyStats: WeeklyStats;
+  previousWeeklyStats: WeeklyStats | null;
+  lastWeeklySummaryShown: string;
 }
 
 export interface Settings {
@@ -44,6 +54,7 @@ export interface Stats {
   monthlyApiCalls: number;
   monthlyApiCallsResetDate: string;
   recentFlags: FlagEvent[];
+  dismissedCategories: Record<string, number>;
 }
 
 export interface FlagEvent {
@@ -136,10 +147,12 @@ export type MessageToBackground =
   | { type: 'increment-stat'; stat: keyof Stats }
   | { type: 'validate-api-key'; apiKey: string }
   | { type: 'record-flag'; event: FlagEvent }
-  | { type: 'record-dismiss'; textSnippet: string }
+  | { type: 'record-dismiss'; textSnippet: string; categories?: string[] }
   | { type: 'check-suppressed'; textSnippet: string }
   | { type: 'suppress-phrase'; text: string }
-  | { type: 'remove-suppressed-phrase'; text: string };
+  | { type: 'remove-suppressed-phrase'; text: string }
+  | { type: 'get-category-boosts' }
+  | { type: 'reset-learned-preferences' };
 
 export type MessageFromBackground =
   | { type: 'analysis-result'; result: AnalysisResult }
@@ -148,4 +161,5 @@ export type MessageFromBackground =
   | { type: 'profile'; profile: RelationshipProfile | null }
   | { type: 'validate-api-key-result'; valid: boolean }
   | { type: 'incoming-result'; result: IncomingAnalysis }
-  | { type: 'suppression-result'; suppressed: boolean };
+  | { type: 'suppression-result'; suppressed: boolean }
+  | { type: 'category-boosts'; boosts: Record<string, number> };

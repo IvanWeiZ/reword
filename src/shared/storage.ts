@@ -60,6 +60,28 @@ const migrations: Record<number, MigrationFn> = {
     data.schemaVersion = 3;
     return data;
   },
+  4: (data) => {
+    // v3 → v4: Add weekly stats tracking
+    data.weeklyStats = data.weeklyStats ?? {
+      weekStart: '',
+      analyzed: 0,
+      flagged: 0,
+      rewritesAccepted: 0,
+    };
+    data.previousWeeklyStats = data.previousWeeklyStats ?? null;
+    data.lastWeeklySummaryShown = data.lastWeeklySummaryShown ?? '';
+    data.schemaVersion = 4;
+    return data;
+  },
+  5: (data) => {
+    // v4 → v5: Add dismissedCategories to stats for adaptive false positive reduction
+    data.stats = {
+      ...data.stats,
+      dismissedCategories: data.stats.dismissedCategories ?? {},
+    };
+    data.schemaVersion = 5;
+    return data;
+  },
 };
 
 export function migrate(data: StoredData): StoredData {
