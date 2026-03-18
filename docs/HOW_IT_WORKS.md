@@ -44,7 +44,7 @@ That's the whole system. Everything else is details about how each piece works.
 
 If you've never built a Chrome extension, here's the minimum you need to know.
 
-### Three contexts, three scripts
+### [ ] Three contexts, three scripts
 
 A Chrome extension runs code in three completely separate environments. They can't share variables — they communicate by sending messages.
 
@@ -56,7 +56,7 @@ A Chrome extension runs code in three completely separate environments. They can
 
 Think of the content script as the eyes and hands (it sees the page and can touch it), and the service worker as the brain (it does the thinking).
 
-### How they talk
+### [ ] How they talk
 
 They use `chrome.runtime.sendMessage()` to pass messages. In this codebase:
 
@@ -73,7 +73,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 All message types are defined in `src/shared/types.ts` as `MessageToBackground` and `MessageFromBackground`. If you want to add a new message type, that's the file to edit.
 
-### The manifest
+### [ ] The manifest
 
 `manifest.json` is the extension's config file. The key parts:
 
@@ -100,7 +100,7 @@ All message types are defined in `src/shared/types.ts` as `MessageToBackground` 
 
 This is what runs inside the user's Gmail tab. It has five main jobs.
 
-### 1. Detect the platform and load an adapter
+### [ ] 1. Detect the platform and load an adapter
 
 ```typescript
 // src/content/index.ts
@@ -117,7 +117,7 @@ The adapter is a thin wrapper that knows Gmail-specific things like "the compose
 
 If you want to add support for a new platform (say, Slack), you create `src/adapters/slack.ts`, implement the four methods, and add a line here.
 
-### 2. Watch for typing (the Observer)
+### [ ] 2. Watch for typing (the Observer)
 
 ```typescript
 // src/content/observer.ts
@@ -133,7 +133,7 @@ observer.observe(inputField);
 
 **Generation counter:** Every time you type something, `observer.generation` increments. When the analysis comes back from the AI, we check if the generation still matches. If you edited the text while the AI was thinking, we discard the stale result.
 
-### 3. Tier 0 — the local heuristic scorer
+### [ ] 3. Tier 0 — the local heuristic scorer
 
 Before anything hits the network, `scoreMessage()` runs:
 
@@ -148,7 +148,7 @@ if (score < 0.3) {
 
 It checks for passive-aggressive patterns (`"whatever"`, `"per my last email"`), negative keywords (`"hate"`, `"stupid"`), ALL CAPS, and excessive punctuation. This filters out the vast majority of normal messages so we never pay for an API call on `"sounds good"` or `"meeting at 3"`.
 
-### 4. Send to the service worker for AI analysis
+### [ ] 4. Send to the service worker for AI analysis
 
 If Tier 0 flags something, the content script asks the background service worker to analyze it:
 
@@ -164,7 +164,7 @@ const response = await sendMessage({
 
 It also fetches the user's relationship profile for this domain first (e.g., Gmail → `romantic`, LinkedIn → `workplace`).
 
-### 5. Show the trigger icon and popup card
+### [ ] 5. Show the trigger icon and popup card
 
 If the service worker comes back with `shouldFlag: true`:
 
@@ -183,7 +183,7 @@ When the user clicks the badge, the `PopupCard` appears with the explanation and
 
 The service worker is the brain. It handles AI logic, storage, and API calls. The main entry point is `handleMessage()` in `service-worker.ts`.
 
-### The three AI tiers
+### [ ] The three AI tiers
 
 When an `analyze` message arrives, the service worker runs three tiers in order:
 

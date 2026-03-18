@@ -39,13 +39,13 @@ Reword:    ⚠️ Review tone
 
 ## Getting Started
 
-### Prerequisites
+### [ ] Prerequisites
 
 - Chrome, Edge, Brave, or Arc (Chromium-based browser)
 - Node.js 18+
 - A free [Gemini API key](https://aistudio.google.com/apikey)
 
-### Install from source
+### [ ] Install from source
 
 ```bash
 # 1. Clone the repo
@@ -59,20 +59,20 @@ npm install
 npm run build
 ```
 
-### Load into Chrome
+### [ ] Load into Chrome
 
 1. Open `chrome://extensions/`
 2. Toggle **Developer mode** on (top-right)
 3. Click **Load unpacked**
 4. Select the `dist/` folder
 
-### Configure your API key
+### [ ] Configure your API key
 
 1. Right-click the Reword icon → **Options**
 2. Paste your [Gemini API key](https://aistudio.google.com/apikey) and click **Validate**
 3. Optionally set relationship profiles (e.g., `mail.google.com` → Romantic)
 
-### Try it
+### [ ] Try it
 
 Open Gmail, compose a message, and type something like:
 
@@ -84,7 +84,7 @@ Wait 2 seconds — the **Review tone** badge should appear next to the Send butt
 
 ## Development
 
-### Project structure
+### [ ] Project structure
 
 ```
 reword/
@@ -115,7 +115,7 @@ reword/
 
 For a deep dive into how everything connects, read **[docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)**.
 
-### Available scripts
+### [ ] Available scripts
 
 | Command | What it does |
 |---|---|
@@ -125,7 +125,7 @@ For a deep dive into how everything connects, read **[docs/HOW_IT_WORKS.md](docs
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run test:e2e` | Run Playwright end-to-end tests |
 
-### Development workflow
+### [ ] Development workflow
 
 ```bash
 # Terminal 1: rebuild on save
@@ -137,7 +137,7 @@ npm run test:watch
 
 After any code change, go to `chrome://extensions/` and click the **↺ refresh** icon on the Reword card to reload the extension.
 
-### Running tests
+### [ ] Running tests
 
 ```bash
 npm test
@@ -155,7 +155,7 @@ Key test files:
 | `tests/background/service-worker.test.ts` | Message routing + tier orchestration |
 | `tests/adapters/*.test.ts` | Per-platform DOM selectors |
 
-### Adding a new platform
+### [ ] Adding a new platform
 
 1. Create `src/adapters/yourplatform.ts` implementing 4 methods:
    - `findInputField()` — locate the compose box
@@ -176,7 +176,7 @@ Key test files:
 
 4. Add a DOM fixture in `tests/mocks/mock-dom-fixtures/` and write tests.
 
-### Changing the AI prompts
+### [ ] Changing the AI prompts
 
 Prompts live in `src/shared/prompts.ts`. The `buildAnalysisPrompt()` function assembles the Gemini prompt from:
 - Relationship-specific instructions (`romantic` / `workplace` / `family`)
@@ -185,7 +185,7 @@ Prompts live in `src/shared/prompts.ts`. The `buildAnalysisPrompt()` function as
 
 The expected response format is structured JSON — see `parseAnalysisResponse()` in `src/background/gemini-client.ts` for the schema.
 
-### Changing the heuristic scorer
+### [ ] Changing the heuristic scorer
 
 The local scorer (`src/content/heuristic-scorer.ts`) is intentionally simple — regex patterns and keyword lists. No ML, no network. To tune it:
 

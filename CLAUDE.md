@@ -20,13 +20,13 @@ npm run format:check # Check formatting without writing
 
 ## Architecture
 
-### Three runtime contexts (Chrome extension)
+### [ ] Three runtime contexts (Chrome extension)
 
 1. **Content script** (`src/content/`) — Injected into Gmail/LinkedIn/Twitter pages. Observes user input, runs heuristic scoring, shows trigger badge and popup card.
 2. **Service worker** (`src/background/`) — Handles AI analysis via message passing. Orchestrates tiered AI: Tier 0 (heuristic) → Tier 1 (on-device AI) → Tier 2 (Gemini API).
 3. **Options page** (`src/options/`) — Settings UI for API key, sensitivity, relationship profiles.
 
-### Key directories
+### [ ] Key directories
 
 ```
 src/
@@ -41,11 +41,11 @@ docs/
   HOW_IT_WORKS.md # In-depth architecture guide for new engineers
 ```
 
-### Message passing
+### [ ] Message passing
 
 Content script ↔ Service worker communication uses `chrome.runtime.sendMessage()`. Message types are defined in `src/shared/types.ts` as `MessageToBackground` and `MessageFromBackground` discriminated unions.
 
-### Adapter pattern
+### [ ] Adapter pattern
 
 Each platform (Gmail, LinkedIn, Twitter) has an adapter in `src/adapters/` implementing the `PlatformAdapter` interface: `findInputField()`, `placeTriggerIcon()`, `writeBack()`, `scrapeThreadContext()`. A generic fallback adapter exists in `base.ts`.
 

@@ -6,7 +6,7 @@ Prioritized list of improvements for the Reword Chrome extension, based on a ful
 
 ## High Priority
 
-### 1. Enforce API timeout (`API_TIMEOUT_MS` is defined but never used)
+### [ ] 1. Enforce API timeout (`API_TIMEOUT_MS` is defined but never used)
 
 `API_TIMEOUT_MS` (5000ms) is declared in `src/shared/constants.ts:7` but never referenced. Gemini API calls in `gemini-client.ts` can hang indefinitely.
 
@@ -23,7 +23,7 @@ Then check `combined` instead of `signal` in the streaming loop.
 
 ---
 
-### 2. Add tests for `src/content/index.ts` (main orchestration — zero coverage)
+### [ ] 2. Add tests for `src/content/index.ts` (main orchestration — zero coverage)
 
 This is the highest-value untested file. It handles platform detection, debounce coordination, abort/cancellation, generation tracking, and message routing. A bug here silently breaks the entire extension.
 
@@ -37,7 +37,7 @@ This is the highest-value untested file. It handles platform detection, debounce
 
 ---
 
-### 3. Add tests for `src/options/options.ts` (settings page — zero coverage)
+### [ ] 3. Add tests for `src/options/options.ts` (settings page — zero coverage)
 
 The options page has no tests despite handling API key validation, profile CRUD, domain management, and stats display. Bugs here silently corrupt user settings.
 
@@ -50,7 +50,7 @@ The options page has no tests despite handling API key validation, profile CRUD,
 
 ---
 
-### 4. Unsafe property access in `src/content/index.ts:116`
+### [ ] 4. Unsafe property access in `src/content/index.ts:116`
 
 ```ts
 if (input && input !== (observer as any)['element']) {
@@ -64,7 +64,7 @@ This casts to `any` to access a private property. If `InputObserver` is refactor
 
 ---
 
-### 5. Add tests for `src/shared/prompts.ts` (zero coverage)
+### [ ] 5. Add tests for `src/shared/prompts.ts` (zero coverage)
 
 Prompt construction drives the quality of AI analysis but has no tests. Changes to prompt templates could regress output format without anyone noticing.
 
@@ -78,7 +78,7 @@ Prompt construction drives the quality of AI analysis but has no tests. Changes 
 
 ## Medium Priority
 
-### 6. Complete adapter test coverage
+### [ ] 6. Complete adapter test coverage
 
 Each adapter (`gmail.ts`, `linkedin.ts`, `twitter.ts`) is only partially tested. Missing:
 
@@ -94,7 +94,7 @@ Also missing: `src/adapters/base.ts` (GenericFallbackAdapter) has zero tests.
 
 ---
 
-### 7. Add tests for `src/background/ondevice-client.ts` (zero coverage)
+### [ ] 7. Add tests for `src/background/ondevice-client.ts` (zero coverage)
 
 The on-device AI fallback (Tier 1) is completely untested. It uses the experimental `globalThis.ai` API with no error logging — failures are silent.
 
@@ -107,7 +107,7 @@ The on-device AI fallback (Tier 1) is completely untested. It uses the experimen
 
 ---
 
-### 8. Add input validation in options page
+### [ ] 8. Add input validation in options page
 
 - **Domain names:** No format validation — user can enter anything (empty strings, spaces, special chars)
 - **API key:** No format check before sending to Gemini for validation
@@ -118,7 +118,7 @@ The on-device AI fallback (Tier 1) is completely untested. It uses the experimen
 
 ---
 
-### 9. Improve error logging in background scripts
+### [ ] 9. Improve error logging in background scripts
 
 Several `catch` blocks silently swallow errors:
 
@@ -131,7 +131,7 @@ Several `catch` blocks silently swallow errors:
 
 ---
 
-### 10. `document.execCommand()` is deprecated
+### [ ] 10. `document.execCommand()` is deprecated
 
 All adapters use `document.execCommand('insertText', false, text)` in `writeBack()`. This API is deprecated and could be removed in future Chrome versions.
 
@@ -156,7 +156,7 @@ Or use `navigator.clipboard.writeText()` + `document.execCommand('paste')` as an
 
 ## Low Priority
 
-### 11. Fragile DOM selectors with no fallback
+### [ ] 11. Fragile DOM selectors with no fallback
 
 Platform adapters rely on hardcoded CSS selectors (e.g., `.btC .dC` for Gmail, `.msg-form__right-actions` for LinkedIn). When platforms update their UI, these break silently.
 
@@ -167,7 +167,7 @@ Platform adapters rely on hardcoded CSS selectors (e.g., `.btC .dC` for Gmail, `
 
 ---
 
-### 12. Heuristic scorer could double-count patterns
+### [ ] 12. Heuristic scorer could double-count patterns
 
 In `src/content/heuristic-scorer.ts`, a message like `"WHATEVER!!!"` can match multiple regex patterns and keywords simultaneously, inflating the score. While `Math.min(1, score)` caps it, the relative scoring between messages is skewed.
 
@@ -175,7 +175,7 @@ In `src/content/heuristic-scorer.ts`, a message like `"WHATEVER!!!"` can match m
 
 ---
 
-### 13. No storage schema migration path
+### [ ] 13. No storage schema migration path
 
 `src/shared/storage.ts` has a `migrate()` function that's a no-op with a comment about future versions. When schema changes are needed, there's no tested migration path.
 
@@ -183,7 +183,7 @@ In `src/content/heuristic-scorer.ts`, a message like `"WHATEVER!!!"` can match m
 
 ---
 
-### 14. Missing e2e tests for full analysis flow
+### [ ] 14. Missing e2e tests for full analysis flow
 
 The Playwright e2e tests (`tests/e2e/`) verify basic DOM rendering but don't test the full analysis pipeline with mocked Gemini responses. Add e2e tests that:
 - Type a message in a compose field
@@ -193,7 +193,7 @@ The Playwright e2e tests (`tests/e2e/`) verify basic DOM rendering but don't tes
 
 ---
 
-### 15. Type safety in service worker message handling
+### [ ] 15. Type safety in service worker message handling
 
 `src/background/service-worker.ts` uses `ExtendedMessage` that mixes `MessageToBackground` with an ad-hoc `validate-api-key` type. Message handler uses `as` casts instead of proper discriminated union narrowing.
 

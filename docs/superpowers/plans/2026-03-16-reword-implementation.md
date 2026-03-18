@@ -81,7 +81,7 @@ reword/
 
 ## Chunk 1: Project Scaffolding and Shared Types
 
-### Task 1: Initialize Project
+### [ ] Task 1: Initialize Project
 
 **Files:**
 - Create: `reword/package.json`
@@ -267,7 +267,7 @@ git commit -m "chore: scaffold Reword Chrome extension project"
 
 ---
 
-### Task 2: Shared Types
+### [ ] Task 2: Shared Types
 
 **Files:**
 - Create: `reword/src/shared/types.ts`
@@ -371,7 +371,7 @@ git commit -m "feat: add shared types for storage, AI analysis, adapters, and me
 
 ---
 
-### Task 3: Constants
+### [ ] Task 3: Constants
 
 **Files:**
 - Create: `reword/src/shared/constants.ts`
@@ -415,7 +415,7 @@ git commit -m "feat: add constants and default stored data"
 
 ---
 
-### Task 4: Storage Wrapper with Schema Versioning
+### [ ] Task 4: Storage Wrapper with Schema Versioning
 
 **Files:**
 - Create: `reword/src/shared/storage.ts`
@@ -567,7 +567,7 @@ git commit -m "feat: add storage wrapper with schema versioning and migration"
 
 ## Chunk 2: Tier 0 Heuristic Scorer
 
-### Task 5: Heuristic Scorer
+### [ ] Task 5: Heuristic Scorer
 
 **Files:**
 - Create: `reword/src/content/heuristic-scorer.ts`
@@ -721,7 +721,7 @@ git commit -m "feat: add Tier 0 heuristic scorer for local tone detection"
 
 ## Chunk 3: Gemini Client and Prompts
 
-### Task 6: Gemini Prompt Templates
+### [ ] Task 6: Gemini Prompt Templates
 
 **Files:**
 - Create: `reword/src/shared/prompts.ts`
@@ -804,7 +804,7 @@ git commit -m "feat: add Gemini prompt templates with relationship-specific inst
 
 ---
 
-### Task 7: Gemini Client
+### [ ] Task 7: Gemini Client
 
 **Files:**
 - Create: `reword/src/background/gemini-client.ts`
@@ -1033,7 +1033,7 @@ git commit -m "feat: add Gemini client with prompt construction and response par
 
 ## Chunk 4: Platform Adapters
 
-### Task 8: Adapter Interface and Generic Fallback
+### [ ] Task 8: Adapter Interface and Generic Fallback
 
 **Files:**
 - Create: `reword/src/adapters/base.ts`
@@ -1115,7 +1115,7 @@ git commit -m "feat: add adapter interface and generic fallback adapter"
 
 ---
 
-### Task 9: Gmail Adapter
+### [ ] Task 9: Gmail Adapter
 
 **Files:**
 - Create: `reword/src/adapters/gmail.ts`
@@ -1266,7 +1266,7 @@ git commit -m "feat: add Gmail platform adapter"
 
 ---
 
-### Task 10: LinkedIn Adapter
+### [ ] Task 10: LinkedIn Adapter
 
 **Files:**
 - Create: `reword/src/adapters/linkedin.ts`
@@ -1394,7 +1394,7 @@ git commit -m "feat: add LinkedIn platform adapter"
 
 ---
 
-### Task 11: Twitter Adapter
+### [ ] Task 11: Twitter Adapter
 
 **Files:**
 - Create: `reword/src/adapters/twitter.ts`
@@ -1526,7 +1526,7 @@ git commit -m "feat: add Twitter/X DM platform adapter"
 
 ## Chunk 5: Content Script (Observer, Trigger, Popup Card)
 
-### Task 12: Input Observer with Debounce
+### [ ] Task 12: Input Observer with Debounce
 
 **Files:**
 - Create: `reword/src/content/observer.ts`
@@ -1682,7 +1682,7 @@ git commit -m "feat: add input observer with debounce and generation counter"
 
 ---
 
-### Task 13: Trigger Icon Component
+### [ ] Task 13: Trigger Icon Component
 
 **Files:**
 - Create: `reword/src/content/trigger.ts`
@@ -1826,7 +1826,7 @@ git commit -m "feat: add trigger icon component with risk-level styling"
 
 ---
 
-### Task 14: Popup Card Component
+### [ ] Task 14: Popup Card Component
 
 **Files:**
 - Create: `reword/src/content/popup-card.ts`
@@ -2144,7 +2144,7 @@ git commit -m "feat: add popup card component with Shadow DOM and rewrite option
 
 ## Chunk 6: Background Service Worker
 
-### Task 15: On-Device AI Client
+### [ ] Task 15: On-Device AI Client
 
 **Files:**
 - Create: `reword/src/background/ondevice-client.ts`
@@ -2205,7 +2205,7 @@ git commit -m "feat: add on-device AI client with availability detection"
 
 ---
 
-### Task 16: Service Worker Message Router
+### [ ] Task 16: Service Worker Message Router
 
 **Files:**
 - Create: `reword/src/background/service-worker.ts`
@@ -2365,7 +2365,7 @@ git commit -m "feat: add background service worker with tier orchestration"
 
 ## Chunk 7: Content Script Entry Point
 
-### Task 17: Content Script Wiring
+### [ ] Task 17: Content Script Wiring
 
 **Files:**
 - Create: `reword/src/content/index.ts`
@@ -2519,7 +2519,7 @@ git commit -m "feat: add content script entry point wiring all components togeth
 
 ## Chunk 8: Options Page
 
-### Task 18: Options Page
+### [ ] Task 18: Options Page
 
 **Files:**
 - Create: `reword/src/options/options.html`
@@ -2832,7 +2832,7 @@ git commit -m "feat: add options/settings page with profiles, domains, and stats
 
 ## Chunk 9: Build, Test, and Polish
 
-### Task 19: Run All Tests and Fix Issues
+### [ ] Task 19: Run All Tests and Fix Issues
 
 - [ ] **Step 1: Run all unit tests**
 
@@ -2863,7 +2863,7 @@ git commit -m "fix: resolve test and build issues"
 
 ---
 
-### Task 20: Manual Extension Testing
+### [ ] Task 20: Manual Extension Testing
 
 - [ ] **Step 1: Load extension in Chrome**
 
@@ -2896,7 +2896,7 @@ git commit -m "fix: address issues found during manual testing"
 
 ---
 
-### Task 21: Final Commit
+### [ ] Task 21: Final Commit
 
 - [ ] **Step 1: Final review and commit**
 

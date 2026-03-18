@@ -15,7 +15,7 @@ A Chrome browser extension that flags potentially problematic messages before yo
 
 Four main components:
 
-### 1. Content Script (per-platform)
+### [ ] 1. Content Script (per-platform)
 
 Injected into supported messaging pages. Responsibilities:
 
@@ -26,7 +26,7 @@ Injected into supported messaging pages. Responsibilities:
 - Render the popup card (Shadow DOM) when the trigger is clicked
 - Swap the selected rewrite back into the input field
 
-### 2. Platform Adapters
+### [ ] 2. Platform Adapters
 
 Thin adapter layer per platform. Each adapter implements three methods:
 
@@ -47,14 +47,14 @@ The generic fallback adapter finds contentEditable elements or textareas near a 
 
 Platform detection: content script checks `window.location.hostname` and loads the appropriate adapter. Unknown domains get the fallback.
 
-### 3. Background Service Worker
+### [ ] 3. Background Service Worker
 
 - Routes messages between content scripts and AI services
 - Manages Gemini API calls with context caching
 - Stores relationship profiles and settings via Chrome Storage API
 - Handles rate limiting and response caching
 
-### 4. Options/Settings Page
+### [ ] 4. Options/Settings Page
 
 - Configure relationship types per contact or domain
 - Set sensitivity level (low / medium / high)
@@ -66,7 +66,7 @@ Platform detection: content script checks `window.location.hostname` and loads t
 
 Three-tier analysis for speed and cost efficiency:
 
-### Tier 0: Local Heuristic Filter (instant, always available)
+### [ ] Tier 0: Local Heuristic Filter (instant, always available)
 
 A lightweight keyword/pattern scorer that runs synchronously in the content script. No AI required. This is the baseline that always works, even offline.
 
@@ -76,7 +76,7 @@ A lightweight keyword/pattern scorer that runs synchronously in the content scri
 - If score < 0.3: clean, no further analysis
 - If score >= 0.3: escalate to Tier 1 (or Tier 2 if Tier 1 unavailable)
 
-### Tier 1: Chrome On-Device AI (instant, free, optional)
+### [ ] Tier 1: Chrome On-Device AI (instant, free, optional)
 
 Uses Chrome's built-in Prompt API for a quick tone check. This runs locally on the device with zero latency and zero API cost. **This tier is optional** — the Prompt API is still rolling out and many users won't have it. If unavailable, Tier 0 escalates directly to Tier 2.
 
@@ -85,7 +85,7 @@ Uses Chrome's built-in Prompt API for a quick tone check. This runs locally on t
 - If clean (confidence > 0.8): no flag, message passes through untouched
 - If flagged or uncertain: escalate to Tier 2
 
-### Tier 2: Gemini 2.5 Flash (fast, cheap)
+### [ ] Tier 2: Gemini 2.5 Flash (fast, cheap)
 
 Full analysis with context caching and streaming.
 
@@ -113,19 +113,19 @@ Full analysis with context caching and streaming.
 }
 ```
 
-### Relationship-Specific Behavior
+### [ ] Relationship-Specific Behavior
 
 - **Romantic** — flags sarcasm, emotional dismissal, bringing up past arguments. Rewrites add empathy and validation.
 - **Workplace** — flags passive-aggression, overly casual tone to superiors, unclear requests. Rewrites professionalize.
 - **Family** — flags guilt-tripping, generational tension patterns. Rewrites de-escalate.
 
-### When NOT to Flag
+### [ ] When NOT to Flag
 
 - Short affirmative messages ("ok", "sounds good", "thanks")
 - Factual/logistical messages ("meeting at 3", "see attached")
 - Messages that are already warm and clear
 
-### Performance Targets
+### [ ] Performance Targets
 
 - Tier 0 (heuristic): < 5ms, synchronous
 - Tier 1 (on-device): < 100ms for tone check (when available)
@@ -149,7 +149,7 @@ This means:
 
 ## UX Design
 
-### Trigger Icon
+### [ ] Trigger Icon
 
 A small badge that appears next to the send button only when a message is flagged. Styled per risk level:
 
@@ -159,7 +159,7 @@ A small badge that appears next to the send button only when a message is flagge
 
 Does not block sending. The user can always ignore it.
 
-### Popup Card
+### [ ] Popup Card
 
 Appears when the user clicks the trigger icon. Rendered in Shadow DOM for style isolation. Contains:
 
@@ -175,7 +175,7 @@ Appears when the user clicks the trigger icon. Rendered in Shadow DOM for style 
    - "Send original" — dismiss and keep the original message
    - "Cancel" — close the popup without doing anything
 
-### Design Principles
+### [ ] Design Principles
 
 - Never block sending — always offer "send original"
 - Always explain why — not just "this is bad" but what specifically could be misread
