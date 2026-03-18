@@ -19,6 +19,43 @@ const PASSIVE_AGGRESSIVE_PATTERNS: { pattern: RegExp; weight: number }[] = [
 ];
 
 /**
+ * Sarcasm patterns — "oh" + positive adjective, sarcastic "sure/wow" phrases,
+ * and "that's just <positive>" constructions. Weight: 0.30.
+ */
+const SARCASM_PATTERNS: RegExp[] = [
+  /\boh\s+(great|wonderful|fantastic|perfect)\b/i,
+  /\bsure,?\s*(no problem at all|whatever you say)\b/i,
+  /\bwow,?\s*(thanks|really|how nice)\b/i,
+  /\bthanks for nothing\b/i,
+  /\bgood for you\b/i,
+  /\bhow nice of you\b/i,
+  /\bthat'?s just\s+(great|wonderful|perfect)\b/i,
+];
+const SARCASM_WEIGHT = 0.3;
+const SARCASM_CAP = 0.6;
+
+/**
+ * Hedging phrases — if 3+ appear in a single message the tone reads as passive.
+ */
+const HEDGING_PHRASES: RegExp[] = [
+  /\bI think\b/i,
+  /\bmaybe\b/i,
+  /\bI'?m not sure\b/i,
+  /\bpossibly\b/i,
+  /\bI guess\b/i,
+  /\bsort of\b/i,
+  /\bkind of\b/i,
+];
+const HEDGING_THRESHOLD = 3;
+const HEDGING_WEIGHT = 0.25;
+
+/**
+ * Exclamation inflation — 3+ consecutive exclamation marks read as aggressive.
+ */
+const EXCLAMATION_INFLATION_RE = /!{3,}/;
+const EXCLAMATION_INFLATION_WEIGHT = 0.25;
+
+/**
  * Each negative keyword has a weight. Within the "keywords" category,
  * only the highest-weight match counts.
  */
@@ -62,6 +99,9 @@ export function scoreMessage(text: string, customPatterns: string[] = []): numbe
   let capsScore = 0;
   let punctuationScore = 0;
   let customScore = 0;
+  let sarcasmScore = 0;
+  let hedgingScore = 0;
+  let exclamationInflationScore = 0;
   const lower = text.toLowerCase();
 
   // Check passive-aggressive patterns — highest-weight match + small bonus for extras
@@ -108,6 +148,34 @@ export function scoreMessage(text: string, customPatterns: string[] = []): numbe
     punctuationScore = 0.3;
   }
 
+  // Sarcasm patterns — weighted-max + bonus for extras
+  let sarcasmMatches = 0;
+  for (const re of SARCASM_PATTERNS) {
+    if (re.test(text)) {
+      sarcasmScore = Math.max(sarcasmScore, SARCASM_WEIGHT);
+      sarcasmMatches++;
+    }
+  }
+  if (sarcasmMatches > 1) {
+    sarcasmScore = Math.min(SARCASM_CAP, sarcasmScore + (sarcasmMatches - 1) * EXTRA_MATCH_BONUS);
+  }
+
+  // Hedging overload — 3+ hedging phrases in a single message
+  let hedgingCount = 0;
+  for (const re of HEDGING_PHRASES) {
+    if (re.test(text)) {
+      hedgingCount++;
+    }
+  }
+  if (hedgingCount >= HEDGING_THRESHOLD) {
+    hedgingScore = HEDGING_WEIGHT;
+  }
+
+  // Exclamation inflation — 3+ consecutive exclamation marks
+  if (EXCLAMATION_INFLATION_RE.test(text)) {
+    exclamationInflationScore = EXCLAMATION_INFLATION_WEIGHT;
+  }
+
   // User-defined custom patterns (#9) — take highest-weight match only
   if (customPatterns.length > 0) {
     for (const patStr of customPatterns) {
@@ -124,6 +192,16 @@ export function scoreMessage(text: string, customPatterns: string[] = []): numbe
 
   return Math.min(
     1,
-    Math.max(0, patternScore + keywordScore + capsScore + punctuationScore + customScore),
+    Math.max(
+      0,
+      patternScore +
+        keywordScore +
+        capsScore +
+        punctuationScore +
+        customScore +
+        sarcasmScore +
+        hedgingScore +
+        exclamationInflationScore,
+    ),
   );
 }

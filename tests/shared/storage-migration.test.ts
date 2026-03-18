@@ -67,7 +67,7 @@ describe('migrate', () => {
       dismissedPatterns: [],
     };
     const result = migrate(v1Data);
-    expect(result.schemaVersion).toBe(2);
+    expect(result.schemaVersion).toBe(3);
     expect(result.settings.customPatterns).toEqual([]);
     expect(result.settings.theme).toBe('auto');
     expect(result.settings.rewritePersonas).toEqual([]);

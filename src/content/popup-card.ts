@@ -1,11 +1,14 @@
 import type { AnalysisResult, Theme } from '../shared/types';
+import type { ConversationHealthTracker } from './conversation-health';
 import { detectPlatformDarkMode } from './dark-mode-detect';
 import { renderDiffHTML } from './helpers';
+import { CooldownTracker } from './cooldown';
 
 interface PopupCardOptions {
   onRewrite: (text: string) => void;
   onDismiss: () => void;
   onUndo?: () => void;
+  onSuppress?: (text: string) => void;
 }
 
 const RISK_COLORS = {
@@ -22,6 +25,10 @@ export class PopupCard {
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
   private currentResult: AnalysisResult | null = null;
   private streamingEl: HTMLElement | null = null;
+  private cooldownTracker = new CooldownTracker();
+  private cooldownDismissed = false;
+  private healthTracker: ConversationHealthTracker | null = null;
+  private currentThreadId: string | null = null;
 
   constructor(options: PopupCardOptions) {
     this.options = options;
@@ -29,6 +36,11 @@ export class PopupCard {
     this.element.className = 'reword-card';
     this.element.style.display = 'none';
     this.injectStyles();
+  }
+
+  setHealthTracker(tracker: ConversationHealthTracker, threadId: string): void {
+    this.healthTracker = tracker;
+    this.currentThreadId = threadId;
   }
 
   setTheme(theme: Theme): void {
@@ -95,15 +107,34 @@ export class PopupCard {
       .reword-diff-added { background: ${dark ? '#1b5e20' : '#e8f5e9'}; color: ${dark ? '#a5d6a7' : 'inherit'}; font-weight: bold; padding: 1px 3px; border-radius: 3px; }
       .reword-diff-removed { background: ${dark ? '#b71c1c' : '#ffebee'}; color: ${dark ? '#ef9a9a' : 'inherit'}; text-decoration: line-through; opacity: 0.7; padding: 1px 3px; border-radius: 3px; }
       .reword-rewrite-diff { line-height: 1.6; }
+      .reword-cooldown-banner { background: #e0f2f1; color: #00695c; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; line-height: 1.4; }
+      .reword-cooldown-banner button { background: #b2dfdb; color: #00695c; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+      .reword-health-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid ${border}; font-size: 12px; }
+      .reword-health-score { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+      .reword-health-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+      .reword-health-breakdown { display: none; margin-top: 6px; font-size: 11px; color: ${muted}; padding: 8px; background: ${cardBg}; border-radius: 6px; }
+      .reword-health-breakdown.reword-expanded { display: block; }
+      .reword-suppress-link { font-size: 11px; color: ${muted}; cursor: pointer; background: none; border: none; padding: 0; text-decoration: underline; display: block; text-align: center; margin-top: 6px; opacity: 0.7; }
+      .reword-suppress-link:hover { opacity: 1; }
     `;
   }
 
   show(result: AnalysisResult, originalText: string): void {
     this.currentResult = result;
     this.lastOriginalText = originalText;
+    this.cooldownTracker.recordAnalysis();
     const dotColor = RISK_COLORS[result.riskLevel];
 
+    const cooldownBanner =
+      !this.cooldownDismissed && this.cooldownTracker.shouldSuggestCooldown()
+        ? `<div class="reword-cooldown-banner">
+            <span>You've sent several flagged messages in the last 5 minutes. Consider taking a short break before replying.</span>
+            <button class="reword-cooldown-dismiss">I'm good</button>
+          </div>`
+        : '';
+
     this.element.innerHTML = `
+      ${cooldownBanner}
       <div class="reword-risk-indicator">
         <span class="reword-risk-dot" style="background:${dotColor}"></span>
         <span>${this.cap(result.riskLevel)} risk — ${this.esc(result.explanation)}</span>
@@ -132,6 +163,8 @@ export class PopupCard {
         <button class="reword-send-original">Send original <span class="reword-rewrite-shortcut">Enter</span></button>
         <button class="reword-cancel">Cancel <span class="reword-rewrite-shortcut">Esc</span></button>
       </div>
+      <button class="reword-suppress-link">Don't flag this again</button>
+      ${this.buildHealthFooter()}
     `;
 
     this.bindCardEvents(result);
@@ -159,6 +192,36 @@ export class PopupCard {
     this.element.style.display = 'none';
     this.streamingEl = null;
     this.removeKeyboardShortcuts();
+  }
+
+  private buildHealthFooter(): string {
+    if (!this.healthTracker || !this.currentThreadId) return '';
+    if (!this.healthTracker.hasEnoughData(this.currentThreadId)) return '';
+
+    const summary = this.healthTracker.getThreadSummary(this.currentThreadId);
+    const score = summary.score;
+    let color: string;
+    if (score >= 80) color = '#4caf50';
+    else if (score >= 50) color = '#ff9800';
+    else color = '#ef5350';
+
+    const issuesHtml =
+      summary.topIssues.length > 0
+        ? `<div style="margin-top:4px">Top issues: ${summary.topIssues.map((i) => this.esc(i)).join(', ')}</div>`
+        : '';
+
+    return `
+      <div class="reword-health-footer">
+        <div class="reword-health-score" title="Click to see breakdown">
+          <span class="reword-health-dot" style="background:${color}"></span>
+          <span>Thread health: ${score}/100</span>
+        </div>
+        <div class="reword-health-breakdown">
+          <div>Analyzed: ${summary.totalAnalyzed} · Flagged: ${summary.totalFlagged} · Rewrites accepted: ${summary.rewritesAccepted}</div>
+          ${issuesHtml}
+        </div>
+      </div>
+    `;
   }
 
   private buildDetailsSection(result: AnalysisResult): string {
@@ -195,10 +258,30 @@ export class PopupCard {
       this.hide();
     });
 
+    // Cooldown dismiss
+    this.element.querySelector('.reword-cooldown-dismiss')?.addEventListener('click', () => {
+      this.cooldownDismissed = true;
+      this.element.querySelector('.reword-cooldown-banner')?.remove();
+    });
+
     // "Why was this flagged?" toggle
     this.element.querySelector('.reword-details-toggle')?.addEventListener('click', () => {
       const content = this.element.querySelector('.reword-details-content');
       content?.classList.toggle('reword-expanded');
+    });
+
+    // "Don't flag this again" suppress link
+    this.element.querySelector('.reword-suppress-link')?.addEventListener('click', () => {
+      if (this.lastOriginalText) {
+        this.options.onSuppress?.(this.lastOriginalText);
+      }
+      this.hide();
+    });
+
+    // Health score expand/collapse
+    this.element.querySelector('.reword-health-score')?.addEventListener('click', () => {
+      const breakdown = this.element.querySelector('.reword-health-breakdown');
+      breakdown?.classList.toggle('reword-expanded');
     });
   }
 

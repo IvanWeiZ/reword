@@ -71,4 +71,90 @@ describe('scoreMessage', () => {
     expect(score).toBeGreaterThanOrEqual(0.3);
   });
 
+  // Sarcasm detection
+  describe('sarcasm patterns', () => {
+    it('flags "oh great" sarcastic constructions', () => {
+      expect(scoreMessage('oh great, another meeting')).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage('oh wonderful, you changed it again')).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage('oh fantastic, more work')).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage('oh perfect, just what I needed')).toBeGreaterThanOrEqual(0.3);
+    });
+
+    it('flags sarcastic "sure" phrases', () => {
+      expect(scoreMessage('sure, no problem at all')).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage('sure, whatever you say')).toBeGreaterThanOrEqual(0.3);
+    });
+
+    it('flags sarcastic "wow" phrases', () => {
+      expect(scoreMessage('wow, thanks')).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage('wow, really')).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage('wow, how nice')).toBeGreaterThanOrEqual(0.3);
+    });
+
+    it('flags "thanks for nothing"', () => {
+      expect(scoreMessage('thanks for nothing')).toBeGreaterThanOrEqual(0.3);
+    });
+
+    it('flags "good for you"', () => {
+      expect(scoreMessage('good for you')).toBeGreaterThanOrEqual(0.3);
+    });
+
+    it('flags "how nice of you"', () => {
+      expect(scoreMessage('how nice of you')).toBeGreaterThanOrEqual(0.3);
+    });
+
+    it('flags "that\'s just great/wonderful/perfect"', () => {
+      expect(scoreMessage("that's just great")).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage("that's just wonderful")).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage("that's just perfect")).toBeGreaterThanOrEqual(0.3);
+    });
+
+    it('does not flag genuine positive phrases', () => {
+      expect(scoreMessage('that sounds great to me')).toBeLessThan(0.3);
+      expect(scoreMessage('thanks so much for your help')).toBeLessThan(0.3);
+    });
+
+    it('increases score for multiple sarcasm matches', () => {
+      const single = scoreMessage('oh great');
+      const double = scoreMessage('oh great, good for you');
+      expect(double).toBeGreaterThan(single);
+    });
+  });
+
+  // Hedging overload
+  describe('hedging overload', () => {
+    it('flags messages with 3+ hedging phrases', () => {
+      const msg = 'I think maybe we could, I guess, try a different approach';
+      expect(scoreMessage(msg)).toBeGreaterThanOrEqual(0.25);
+    });
+
+    it('does not flag messages with fewer than 3 hedging phrases', () => {
+      const msg = 'I think maybe we should try this';
+      expect(scoreMessage(msg)).toBeLessThan(0.25);
+    });
+
+    it('detects all hedging phrases', () => {
+      const msg = "I think maybe I'm not sure, possibly I guess it's sort of kind of okay";
+      expect(scoreMessage(msg)).toBeGreaterThanOrEqual(0.25);
+    });
+  });
+
+  // Exclamation inflation
+  describe('exclamation inflation', () => {
+    it('flags 3+ consecutive exclamation marks', () => {
+      expect(scoreMessage('Fine!!!')).toBeGreaterThanOrEqual(0.25);
+      expect(scoreMessage('Really!!!!')).toBeGreaterThanOrEqual(0.25);
+    });
+
+    it('does not flag single exclamation mark as inflation', () => {
+      // Single ! should not trigger exclamation inflation (though !! may trigger
+      // the existing excessive-punctuation detector — that's a separate category)
+      expect(scoreMessage('Great!')).toBeLessThan(0.25);
+    });
+
+    it('flags aggressive exclamation inflation in context', () => {
+      expect(scoreMessage('I said I would do it!!!')).toBeGreaterThanOrEqual(0.25);
+    });
+  });
+
 });

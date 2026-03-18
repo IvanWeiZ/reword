@@ -68,10 +68,38 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
     }
 
     case 'check-suppressed': {
-      // Feature #6: Check if pattern is suppressed
+      // Feature #6: Check if pattern is suppressed (dismissed patterns or explicit suppression)
       const data = await loadStoredData();
       const pattern = data.dismissedPatterns.find((p) => p.normalized === message.textSnippet);
-      return { type: 'suppression-result', suppressed: pattern?.suppressed === true };
+      if (pattern?.suppressed === true) {
+        return { type: 'suppression-result', suppressed: true };
+      }
+      // Check explicit suppressedPhrases list (exact match or substring)
+      const textLower = message.textSnippet.toLowerCase();
+      const phraseMatch = data.settings.suppressedPhrases.some((phrase) => {
+        const phraseLower = phrase.toLowerCase();
+        return textLower === phraseLower || textLower.includes(phraseLower);
+      });
+      return { type: 'suppression-result', suppressed: phraseMatch };
+    }
+
+    case 'suppress-phrase': {
+      const data = await loadStoredData();
+      const text = message.text;
+      if (text && !data.settings.suppressedPhrases.includes(text)) {
+        data.settings.suppressedPhrases.push(text);
+        await saveStoredData(data);
+      }
+      return { type: 'settings', data };
+    }
+
+    case 'remove-suppressed-phrase': {
+      const data = await loadStoredData();
+      data.settings.suppressedPhrases = data.settings.suppressedPhrases.filter(
+        (p) => p !== message.text,
+      );
+      await saveStoredData(data);
+      return { type: 'settings', data };
     }
 
     case 'analyze-incoming': {

@@ -18,6 +18,7 @@ export interface Settings {
   theme: Theme;
   rewritePersonas: RewritePersona[];
   analyzeIncoming: boolean;
+  suppressedPhrases: string[];
 }
 
 export type Theme = 'auto' | 'light' | 'dark';
@@ -136,7 +137,9 @@ export type MessageToBackground =
   | { type: 'validate-api-key'; apiKey: string }
   | { type: 'record-flag'; event: FlagEvent }
   | { type: 'record-dismiss'; textSnippet: string }
-  | { type: 'check-suppressed'; textSnippet: string };
+  | { type: 'check-suppressed'; textSnippet: string }
+  | { type: 'suppress-phrase'; text: string }
+  | { type: 'remove-suppressed-phrase'; text: string };
 
 export type MessageFromBackground =
   | { type: 'analysis-result'; result: AnalysisResult }

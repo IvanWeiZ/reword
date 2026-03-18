@@ -23,6 +23,7 @@ import {
   SlackAdapter,
   DiscordAdapter,
   OutlookAdapter,
+  TeamsAdapter,
   WhatsAppAdapter,
   GenericFallbackAdapter,
 } from '../adapters';
@@ -35,6 +36,7 @@ function detectAdapter(): PlatformAdapter {
   if (host.endsWith('.slack.com') || host === 'app.slack.com') return new SlackAdapter();
   if (host === 'discord.com') return new DiscordAdapter();
   if (host === 'outlook.live.com' || host === 'outlook.office.com') return new OutlookAdapter();
+  if (host === 'teams.microsoft.com') return new TeamsAdapter();
   if (host === 'web.whatsapp.com') return new WhatsAppAdapter();
   return new GenericFallbackAdapter();
 }
@@ -69,6 +71,9 @@ function init(): void {
       if (previousText) {
         adapter.writeBack(previousText);
       }
+    },
+    onSuppress: (text) => {
+      sendMessage({ type: 'suppress-phrase', text });
     },
   });
 

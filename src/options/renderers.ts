@@ -100,6 +100,33 @@ export function renderPersonas(data: StoredData) {
   });
 }
 
+export function renderSuppressedPhrases(data: StoredData) {
+  const list = document.getElementById('suppressed-list')!;
+  if (data.settings.suppressedPhrases.length === 0) {
+    list.innerHTML = '<p class="hint">No suppressed phrases yet.</p>';
+    return;
+  }
+  list.innerHTML = data.settings.suppressedPhrases
+    .map(
+      (phrase, i) => `
+      <div class="suppressed-item">
+        <span>${esc(phrase)}</span>
+        <button data-remove-suppressed="${i}">Remove</button>
+      </div>
+    `,
+    )
+    .join('');
+
+  list.querySelectorAll<HTMLElement>('[data-remove-suppressed]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.removeSuppressed!, 10);
+      data.settings.suppressedPhrases.splice(idx, 1);
+      await saveStoredData(data);
+      renderSuppressedPhrases(data);
+    });
+  });
+}
+
 export function renderStats(data: StoredData) {
   const stats = document.getElementById('stats')!;
   stats.innerHTML = `
@@ -151,6 +178,7 @@ export function renderAll(data: StoredData) {
   renderDomains(data);
   renderPatterns(data);
   renderPersonas(data);
+  renderSuppressedPhrases(data);
   renderStats(data);
   renderHistory(data);
 }

@@ -51,6 +51,15 @@ const migrations: Record<number, MigrationFn> = {
     data.schemaVersion = 2;
     return data;
   },
+  3: (data) => {
+    // v2 → v3: Add suppressedPhrases to settings
+    data.settings = {
+      ...data.settings,
+      suppressedPhrases: data.settings.suppressedPhrases ?? [],
+    };
+    data.schemaVersion = 3;
+    return data;
+  },
 };
 
 export function migrate(data: StoredData): StoredData {
