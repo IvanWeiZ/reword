@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reword Demo</title>
+<style>
+  /* ── Reset & Base ──────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: #0f0f1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Container ─────────────────────────────────────────── */
+  .demo-container {
+    width: 780px;
+    position: relative;
+  }
+
+  /* ── Fake Gmail Compose ────────────────────────────────── */
+  .gmail-compose {
+    background: #1e1e2e;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    border: 1px solid #2a2a3e;
+  }
+
+  .gmail-titlebar {
+    background: #2a2a3e;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .gmail-titlebar-text {
+    color: #e0e0e0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .gmail-titlebar-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .gmail-titlebar-btn {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    background: #444;
+    opacity: 0.5;
+  }
+
+  .gmail-fields {
+    padding: 12px 16px;
+    border-bottom: 1px solid #2a2a3e;
+  }
+
+  .gmail-field {
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 13px;
+    color: #888;
+    gap: 8px;
+  }
+
+  .gmail-field-label {
+    min-width: 40px;
+    color: #666;
+  }
+
+  .gmail-field-value {
+    color: #c0c0c0;
+  }
+
+  .gmail-body {
+    padding: 16px;
+    min-height: 120px;
+    position: relative;
+  }
+
+  .gmail-textarea {
+    width: 100%;
+    min-height: 80px;
+    background: transparent;
+    border: none;
+    color: #e0e0e0;
+    font-size: 14px;
+    line-height: 1.6;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+  }
+
+  .gmail-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    gap: 12px;
+    border-top: 1px solid #2a2a3e;
+  }
+
+  .gmail-send-btn {
+    background: #4285f4;
+    color: white;
+    border: none;
+    padding: 8px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: default;
+  }
+
+  .gmail-toolbar-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 2px;
+    background: #333;
+    opacity: 0.4;
+  }
+
+  /* ── Trigger Badge ─────────────────────────────────────── */
+  .trigger-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid;
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    z-index: 10;
+    /* medium/dark palette from trigger.ts */
+    background: #2a2010;
+    border-color: #c07820;
+    color: #f0c060;
+    opacity: 0;
+    transform: scale(0.8) translateY(4px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  .trigger-badge.visible {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+
+  .trigger-badge.clicked {
+    transform: scale(0.92);
+    transition: transform 0.1s ease;
+  }
+
+  .trigger-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #c07820;
+    display: inline-block;
+  }
+
+  /* ── Popup Card (from popup-card.ts buildCSS, dark theme) */
+  .reword-card {
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
+    background: #1e1e2e;
+    color: #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    padding: 20px;
+    z-index: 99999;
+    font-size: 14px;
+    line-height: 1.5;
+    font-family: system-ui, -apple-system, sans-serif;
+    border: 1px solid #2a2a3e;
+    /* animation */
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    pointer-events: none;
+  }
+
+  .reword-card.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .reword-risk-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .reword-risk-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .reword-original {
+    background: #2a2a3e;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    border-left: 3px solid #aaa;
+  }
+
+  .reword-original-label {
+    font-size: 11px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .reword-explanation {
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 16px;
+  }
+
+  .reword-rewrites {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .reword-rewrite-option {
+    background: #2a2a3e;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+  }
+
+  .reword-rewrite-option:hover {
+    border-color: #6366f1;
+  }
+
+  .reword-rewrite-option.selected {
+    border-color: #6366f1;
+    background: #2d2d4e;
+    transform: scale(1.015);
+  }
+
+  .reword-rewrite-label {
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #aaa;
+  }
+
+  .reword-rewrite-shortcut {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 10px;
+    color: #aaa;
+    opacity: 0.6;
+  }
+
+  .reword-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: flex-end;
+  }
+
+  .reword-send-original, .reword-cancel {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #888;
+  }
+
+  .reword-shortcut-hint {
+    font-size: 11px;
+    color: #aaa;
+    text-align: center;
+    margin-top: 8px;
+    opacity: 0.7;
+  }
+
+  /* ── Undo Toast ────────────────────────────────────────── */
+  .reword-undo-toast {
+    position: absolute;
+    bottom: -52px;
+    right: 0;
+    background: #2a2a3e;
+    color: #e0e0e0;
+    padding: 10px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    z-index: 100000;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 13px;
+    font-family: system-ui;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  .reword-undo-toast.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reword-undo-btn {
+    background: #6366f1;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+
+  /* ── Typing cursor blink ───────────────────────────────── */
+  .cursor-blink::after {
+    content: '|';
+    animation: blink 0.6s step-end infinite;
+    color: #6366f1;
+    font-weight: 300;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  /* ── Text replacement transition ───────────────────────── */
+  .gmail-textarea.replacing {
+    transition: color 0.15s ease;
+    color: transparent;
+  }
+
+  .gmail-textarea.replaced {
+    color: #a5d6a7;
+    transition: color 0.5s ease;
+  }
+
+  .gmail-textarea.final {
+    color: #e0e0e0;
+    transition: color 0.8s ease;
+  }
+
+  /* ── Watermark ─────────────────────────────────────────── */
+  .demo-watermark {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 13px;
+    color: #555;
+    letter-spacing: 0.3px;
+  }
+
+  .demo-watermark strong {
+    color: #6366f1;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-container">
+  <!-- Fake Gmail Compose -->
+  <div class="gmail-compose">
+    <div class="gmail-titlebar">
+      <span class="gmail-titlebar-text">New Message</span>
+      <div class="gmail-titlebar-buttons">
+        <div class="gmail-titlebar-btn"></div>
+        <div class="gmail-titlebar-btn"></div>
+        <div class="gmail-titlebar-btn"></div>
+      </div>
+    </div>
+
+    <div class="gmail-fields">
+      <div class="gmail-field">
+        <span class="gmail-field-label">To</span>
+        <span class="gmail-field-value">alex.chen@company.com</span>
+      </div>
+      <div class="gmail-field">
+        <span class="gmail-field-label">Subj</span>
+        <span class="gmail-field-value">Re: Q3 Report Timeline</span>
+      </div>
+    </div>
+
+    <div class="gmail-body">
+      <div class="gmail-textarea" id="compose-text"></div>
+      <!-- Trigger badge -->
+      <div class="trigger-badge" id="trigger-badge">
+        <span class="trigger-dot"></span>
+        <span>Review tone</span>
+      </div>
+    </div>
+
+    <div class="gmail-toolbar">
+      <div class="gmail-send-btn">Send</div>
+      <div class="gmail-toolbar-icon"></div>
+      <div class="gmail-toolbar-icon"></div>
+      <div class="gmail-toolbar-icon"></div>
+    </div>
+  </div>
+
+  <!-- Popup Card (hidden initially) -->
+  <div class="reword-card" id="popup-card">
+    <div class="reword-risk-indicator">
+      <span class="reword-risk-dot" style="background:#f0a030"></span>
+      <span>Medium risk — Passive-aggressive phrasing detected</span>
+    </div>
+    <div class="reword-original">
+      <div class="reword-original-label">Your message</div>
+      <div>Whatever, per my last email I already covered this.</div>
+    </div>
+    <div class="reword-explanation">Dismissive opener ("whatever"). "Per my last email" often reads as condescending.</div>
+    <div class="reword-rewrites">
+      <div class="reword-rewrite-option" id="option-warmer">
+        <div class="reword-rewrite-label">Warmer</div>
+        <div>Happy to clarify! I touched on this in my previous email — want me to walk through it together?</div>
+        <span class="reword-rewrite-shortcut">1</span>
+      </div>
+      <div class="reword-rewrite-option" id="option-direct">
+        <div class="reword-rewrite-label">Direct</div>
+        <div>I covered this in my earlier email. Let me know which part needs more detail.</div>
+        <span class="reword-rewrite-shortcut">2</span>
+      </div>
+      <div class="reword-rewrite-option" id="option-minimal">
+        <div class="reword-rewrite-label">Minimal</div>
+        <div>See my previous email for details. Happy to discuss further.</div>
+        <span class="reword-rewrite-shortcut">3</span>
+      </div>
+    </div>
+    <div class="reword-shortcut-hint">Press 1-3 to quick-accept, Esc to close</div>
+    <div class="reword-actions">
+      <button class="reword-send-original">Send original</button>
+      <button class="reword-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Undo Toast -->
+  <div class="reword-undo-toast" id="undo-toast">
+    <span>Rewrite applied</span>
+    <button class="reword-undo-btn">Undo</button>
+  </div>
+
+  <div class="demo-watermark">
+    <strong>Reword</strong> &mdash; Catch the tone before they do
+  </div>
+</div>
+
+<script>
+(function () {
+  const ORIGINAL_TEXT = 'Whatever, per my last email I already covered this.';
+  const WARMER_TEXT = 'Happy to clarify! I touched on this in my previous email \u2014 want me to walk through it together?';
+
+  const composeEl  = document.getElementById('compose-text');
+  const badgeEl    = document.getElementById('trigger-badge');
+  const cardEl     = document.getElementById('popup-card');
+  const warmerEl   = document.getElementById('option-warmer');
+  const toastEl    = document.getElementById('undo-toast');
+
+  /* ── Timeline helper ─────────────────────────────────── */
+  function wait(ms) {
+    return new Promise(r => setTimeout(r, ms));
+  }
+
+  /* ── Typing animation ────────────────────────────────── */
+  async function typeText(el, text, speed) {
+    el.textContent = '';
+    el.classList.add('cursor-blink');
+    for (let i = 0; i < text.length; i++) {
+      el.textContent = text.slice(0, i + 1);
+      // variable speed for realism
+      const jitter = speed + (Math.random() - 0.5) * speed * 0.6;
+      await wait(Math.max(15, jitter));
+    }
+    el.classList.remove('cursor-blink');
+  }
+
+  /* ── Main animation sequence ─────────────────────────── */
+  async function runSequence() {
+    // Reset everything
+    composeEl.textContent = '';
+    composeEl.className = 'gmail-textarea';
+    badgeEl.classList.remove('visible', 'clicked');
+    cardEl.classList.remove('visible');
+    warmerEl.classList.remove('selected');
+    toastEl.classList.remove('visible');
+
+    // Phase 1: Type the passive-aggressive message
+    await wait(800);
+    await typeText(composeEl, ORIGINAL_TEXT, 42);
+
+    // Phase 2: Pause, then show trigger badge
+    await wait(1200);
+    badgeEl.classList.add('visible');
+
+    // Phase 3: Wait, then click badge
+    await wait(1800);
+    badgeEl.classList.add('clicked');
+    await wait(120);
+    badgeEl.classList.remove('clicked');
+
+    // Phase 4: Show popup card
+    await wait(200);
+    cardEl.classList.add('visible');
+
+    // Phase 5: Hover/select the "Warmer" option
+    await wait(2200);
+    warmerEl.classList.add('selected');
+
+    // Phase 6: "Click" to accept
+    await wait(900);
+
+    // Hide card
+    cardEl.classList.remove('visible');
+    badgeEl.classList.remove('visible');
+
+    // Replace text with animation
+    await wait(250);
+    composeEl.classList.add('replacing');
+    await wait(180);
+    composeEl.textContent = WARMER_TEXT;
+    composeEl.classList.remove('replacing');
+    composeEl.classList.add('replaced');
+
+    // Show undo toast
+    await wait(100);
+    toastEl.classList.add('visible');
+
+    // Fade text back to normal color
+    await wait(800);
+    composeEl.classList.remove('replaced');
+    composeEl.classList.add('final');
+
+    // Hold the result
+    await wait(3500);
+
+    // Hide undo toast
+    toastEl.classList.remove('visible');
+
+    // Pause before loop
+    await wait(1500);
+  }
+
+  /* ── Loop ────────────────────────────────────────────── */
+  async function loop() {
+    while (true) {
+      await runSequence();
+    }
+  }
+
+  // Start after 1 second
+  setTimeout(loop, 1000);
+})();
+</script>
+</body>
+</html>

@@ -32,4 +32,26 @@ describe('TriggerIcon', () => {
     trigger.element.click();
     expect(onClick).toHaveBeenCalled();
   });
+
+  it('applies pulse animation class when shown', () => {
+    trigger.show('medium');
+    expect(trigger.element.classList.contains('reword-pulse')).toBe(true);
+  });
+
+  it('restarts pulse animation on subsequent show calls', () => {
+    trigger.show('medium');
+    expect(trigger.element.classList.contains('reword-pulse')).toBe(true);
+    // Second call should still have the class (removed and re-added)
+    trigger.show('high');
+    expect(trigger.element.classList.contains('reword-pulse')).toBe(true);
+  });
+
+  it('injects pulse keyframes stylesheet into document head', () => {
+    trigger.show('low');
+    const styles = document.querySelectorAll('style');
+    const hasKeyframes = Array.from(styles).some((s) =>
+      s.textContent?.includes('@keyframes reword-pulse'),
+    );
+    expect(hasKeyframes).toBe(true);
+  });
 });

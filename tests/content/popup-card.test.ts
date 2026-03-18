@@ -65,9 +65,54 @@ describe('PopupCard', () => {
     expect(card.element.style.display).toBe('none');
   });
 
+  it('accepts rewrite via Alt+number key', () => {
+    card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '2', altKey: true }));
+    expect(onRewrite).toHaveBeenCalledWith(MOCK_FLAGGED_RESULT.rewrites[1].text);
+  });
+
+  it('dismisses popup and sends original on Enter key', () => {
+    card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(onDismiss).toHaveBeenCalled();
+    expect(card.element.style.display).toBe('none');
+  });
+
+  it('does not respond to keys when popup is hidden', () => {
+    card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+    card.hide();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }));
+    expect(onRewrite).not.toHaveBeenCalled();
+  });
+
+  it('removes keyboard listener on hide', () => {
+    card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+    card.hide();
+    // Show again and verify shortcuts still work (listener re-bound)
+    card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }));
+    expect(onRewrite).toHaveBeenCalledWith(MOCK_FLAGGED_RESULT.rewrites[0].text);
+  });
+
+  it('shows shortcut hints with option key symbol', () => {
+    card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+    const hints = card.element.querySelectorAll('.reword-rewrite-shortcut');
+    expect(hints[0]?.textContent).toContain('⌥1');
+    expect(hints[1]?.textContent).toContain('⌥2');
+    expect(hints[2]?.textContent).toContain('⌥3');
+  });
+
+  it('shows Esc and Enter hints on action buttons', () => {
+    card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+    const sendBtn = card.element.querySelector('.reword-send-original');
+    const cancelBtn = card.element.querySelector('.reword-cancel');
+    expect(sendBtn?.textContent).toContain('Enter');
+    expect(cancelBtn?.textContent).toContain('Esc');
+  });
+
   it('shows shortcut hints (#2)', () => {
     card.show(MOCK_FLAGGED_RESULT, 'Whatever');
-    expect(card.element.querySelector('.reword-shortcut-hint')?.textContent).toContain('1-3');
+    expect(card.element.querySelector('.reword-shortcut-hint')?.textContent).toContain('1\u20133');
   });
 
   // Feature #4: "Why was this flagged?" detail section

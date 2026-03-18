@@ -53,6 +53,17 @@ describe('TwitterAdapter', () => {
     expect(adapter.writeBack('test')).toBe(false);
   });
 
+  it('writeBack returns true when input exists and text is inserted', () => {
+    const result = adapter.writeBack('Friendly rewrite here');
+    expect(result).toBe(true);
+  });
+
+  it('writeBack replaces existing content in the input field', () => {
+    adapter.writeBack('New DM text');
+    const input = adapter.findInputField();
+    expect(input?.textContent).toBe('New DM text');
+  });
+
   it('scrapeThreadContext returns an array', () => {
     expect(Array.isArray(adapter.scrapeThreadContext())).toBe(true);
   });
@@ -80,6 +91,50 @@ describe('TwitterAdapter', () => {
     }
     document.body.innerHTML += html;
     expect(adapter.scrapeThreadContext().length).toBeLessThanOrEqual(10);
+  });
+
+  it('scrapeThreadContext returns empty array when no messages exist', () => {
+    document.body.innerHTML = '<div>No messages here</div>';
+    const context = adapter.scrapeThreadContext();
+    expect(context).toEqual([]);
+  });
+
+  it('scrapeThreadContext skips entries without tweetText content', () => {
+    document.body.innerHTML = `
+      <div data-testid="messageEntry">
+        <div data-testid="tweetText"></div>
+      </div>
+      <div data-testid="messageEntry">
+        <div data-testid="tweetText">Real message</div>
+      </div>
+    `;
+    const context = adapter.scrapeThreadContext();
+    expect(context.length).toBe(1);
+    expect(context[0].text).toBe('Real message');
+  });
+
+  it('scrapeThreadContext truncates long messages to 500 chars', () => {
+    const longText = 'X'.repeat(600);
+    document.body.innerHTML = `
+      <div data-testid="messageEntry">
+        <div data-testid="tweetText">${longText}</div>
+      </div>
+    `;
+    const context = adapter.scrapeThreadContext();
+    expect(context[0].text.length).toBeLessThanOrEqual(500);
+  });
+
+  it('scrapeThreadContext defaults all senders to other', () => {
+    document.body.innerHTML = `
+      <div data-testid="messageEntry">
+        <div data-testid="tweetText">First</div>
+      </div>
+      <div data-testid="messageEntry">
+        <div data-testid="tweetText">Second</div>
+      </div>
+    `;
+    const context = adapter.scrapeThreadContext();
+    expect(context.every((m) => m.sender === 'other')).toBe(true);
   });
 
   describe('checkHealth', () => {

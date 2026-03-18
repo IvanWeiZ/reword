@@ -1,10 +1,28 @@
 import type { RiskLevel } from '../shared/types';
 
-const RISK_COLORS: Record<RiskLevel, { bg: string; border: string; text: string }> = {
-  low: { bg: '#e3f2fd', border: '#90caf9', text: '#1565c0' },
-  medium: { bg: '#fff3e0', border: '#f0a030', text: '#e65100' },
-  high: { bg: '#ffebee', border: '#ef5350', text: '#c62828' },
+const RISK_COLORS: Record<RiskLevel, { bg: string; border: string; text: string; glow: string }> = {
+  low: { bg: '#e3f2fd', border: '#90caf9', text: '#1565c0', glow: 'rgba(144,202,249,0.6)' },
+  medium: { bg: '#fff3e0', border: '#f0a030', text: '#e65100', glow: 'rgba(240,160,48,0.45)' },
+  high: { bg: '#ffebee', border: '#ef5350', text: '#c62828', glow: 'rgba(239,83,80,0.45)' },
 };
+
+const PULSE_CLASS = 'reword-pulse';
+let styleInjected = false;
+
+function injectPulseStyle(): void {
+  if (styleInjected) return;
+  const style = document.createElement('style');
+  style.textContent = `
+@keyframes reword-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--reword-glow); }
+  50% { transform: scale(1.1); box-shadow: 0 0 8px 2px var(--reword-glow); }
+}
+.${PULSE_CLASS} {
+  animation: reword-pulse 1.5s ease-in-out 3;
+}`;
+  document.head.appendChild(style);
+  styleInjected = true;
+}
 
 export class TriggerIcon {
   element: HTMLElement;
@@ -36,13 +54,19 @@ export class TriggerIcon {
   }
 
   show(riskLevel: RiskLevel): void {
+    injectPulseStyle();
     this._riskLevel = riskLevel;
     const colors = RISK_COLORS[riskLevel];
     this.element.style.backgroundColor = colors.bg;
     this.element.style.borderColor = colors.border;
     this.element.style.color = colors.text;
+    this.element.style.setProperty('--reword-glow', colors.glow);
     const dot = this.element.querySelector<HTMLElement>('.reword-dot');
     if (dot) dot.style.backgroundColor = colors.border;
+    // Restart pulse animation by removing and re-adding the class
+    this.element.classList.remove(PULSE_CLASS);
+    void this.element.offsetWidth; // force reflow to restart animation
+    this.element.classList.add(PULSE_CLASS);
     this.element.style.display = 'inline-flex';
   }
 

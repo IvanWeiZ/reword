@@ -1,153 +1,174 @@
+<div align="center">
+
 # Reword
 
-> Flag problematic messages and get kinder rewrites before you hit Send.
+**Catch the tone. Keep the message.**
 
-Reword is an open-source Chrome extension that watches you type in Gmail, LinkedIn, and Twitter DMs. When it detects passive-aggression, dismissiveness, or harsh tone, it places a subtle **"Review tone"** badge near the Send button. Click it to see AI-powered rewrites — Warmer, Direct but kind, or Minimal change — and swap one in with a single click.
+AI-powered tone checker that flags passive-aggression, dismissiveness, and harshness in your messages — and offers kinder rewrites before you hit Send.
 
-Your messages never touch a server. Everything runs locally or through your own Gemini API key.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](manifest.json)
+[![Tests](https://img.shields.io/badge/tests-42%20passing-brightgreen.svg)](#testing)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](tsconfig.json)
+
+![Demo](demo/demo.gif)
+
+</div>
 
 ---
 
-## Demo
+## Why Reword?
 
-```
-You type:  "Whatever, per my last email I already covered this."
+A single harsh email can derail a project, damage a relationship, or ruin someone's day.
 
-Reword:    ⚠️ Review tone
+- **70% of employees** say poor communication is their top source of workplace stress ([Grammarly, 2023](https://www.grammarly.com/business/learn/state-of-business-communication/))
+- Miscommunication costs businesses an estimated **$12,506 per employee per year**
+- The message you _meant_ to sound efficient often _reads_ as cold, dismissive, or passive-aggressive
 
-           Medium risk — passive-aggressive, dismissive of recipient
+We've all hit Send and instantly regretted it. Reword gives you a 2-second safety net — a quiet nudge that says _"hey, this might land wrong"_ and three ways to fix it, without changing what you actually want to say.
 
-           💚 Warmer       "I know I mentioned this before — happy to recap the key points if that helps."
-           💬 Direct       "I covered this in my last email. Let me know if you'd like me to resend it."
-           ✏️ Minimal      "As mentioned in my last email, this was already addressed."
-
-           [Send original]   [Cancel]
-```
+No account. No server. No judgment. Just better communication.
 
 ---
 
 ## Features
 
-- **Works where you already message** — Gmail, LinkedIn, Twitter/X DMs
-- **Three AI tiers** — local keyword filter → Chrome on-device AI → Gemini 2.5 Flash. Most messages never hit the paid API.
-- **Relationship-aware** — configure contexts per domain: romantic, workplace, or family. The AI rewrites differently for your partner vs. your boss.
-- **Never blocks you** — always shows "Send original". You're in control.
-- **Privacy-first** — no account, no server, no data stored outside your browser
-- **Open source** — MIT licensed
+| | Feature | Details |
+|---|---|---|
+| :globe_with_meridians: | **6 Platforms** | Gmail, LinkedIn, Twitter/X, Slack, Discord + generic fallback for any site |
+| :brain: | **3-Tier AI** | Local heuristics (< 5ms) &#8594; Chrome on-device AI &#8594; Gemini 2.5 Flash. Most messages never hit the paid API |
+| :lock: | **Privacy-First** | No account, no server, no data leaves your browser. Your API key, your rules |
+| :people_holding_hands: | **Relationship-Aware** | Configure per-domain contexts: _workplace_, _romantic_, _family_. The AI rewrites differently for your partner vs. your boss |
+| :incoming_envelope: | **Incoming Analysis** | Optionally analyze messages you _receive_ to understand the tone before reacting |
+| :art: | **Dark Mode** | Popup card respects OS/site dark theme automatically |
+| :jigsaw: | **Custom Patterns** | Add your own trigger phrases and suppression lists |
+| :bust_in_silhouette: | **Tone Personas** | Beyond Warmer / Direct / Minimal — define custom rewrite styles |
+| :keyboard: | **Keyboard Shortcuts** | Accept rewrites instantly with `Alt+1`, `Alt+2`, `Alt+3` |
+| :leftwards_arrow_with_hook: | **Undo Support** | Changed your mind? Restore the original draft with one click |
+| :shield: | **Never Blocks You** | Always shows "Send original". You're in control |
 
 ---
 
-## Getting Started
+## Quick Start
 
-### [ ] Prerequisites
-
-- Chrome, Edge, Brave, or Arc (Chromium-based browser)
-- Node.js 18+
-- A free [Gemini API key](https://aistudio.google.com/apikey)
-
-### [ ] Install from source
+**1. Clone and build**
 
 ```bash
-# 1. Clone the repo
-git clone <repo-url>
-cd reword
-
-# 2. Install dependencies
-npm install
-
-# 3. Build the extension
-npm run build
+git clone https://github.com/IvanWeiZ/reword.git
+cd reword && npm install && npm run build
 ```
 
-### [ ] Load into Chrome
+**2. Load into Chrome**
 
-1. Open `chrome://extensions/`
-2. Toggle **Developer mode** on (top-right)
-3. Click **Load unpacked**
-4. Select the `dist/` folder
+Open `chrome://extensions/` > toggle **Developer mode** on > click **Load unpacked** > select the `dist/` folder.
 
-### [ ] Configure your API key
+**3. Add your API key**
 
-1. Right-click the Reword icon → **Options**
-2. Paste your [Gemini API key](https://aistudio.google.com/apikey) and click **Validate**
-3. Optionally set relationship profiles (e.g., `mail.google.com` → Romantic)
+Right-click the Reword icon > **Options** > paste your free [Gemini API key](https://aistudio.google.com/apikey) > click **Validate**.
 
-### [ ] Try it
+**4. Try it**
 
-Open Gmail, compose a message, and type something like:
+Open Gmail, compose a message, and type:
 
-> `Whatever, I guess that works. Not like I had plans or anything.`
+> _"Whatever, per my last email I already covered this."_
 
-Wait 2 seconds — the **Review tone** badge should appear next to the Send button.
+Wait 2 seconds. The **Review tone** badge appears. Click it to see three rewrites:
+
+```
+  Warmer     "I know I mentioned this before — happy to recap
+              the key points if that helps."
+
+  Direct     "I covered this in my last email. Let me know
+              if you'd like me to resend it."
+
+  Minimal    "As mentioned in my last email, this was already
+              addressed."
+```
+
+Pick one, or send the original. Your call.
+
+---
+
+## How It Works
+
+```
+  You type a message in Gmail / LinkedIn / Twitter / Slack / Discord
+                              |
+                              v
+                 ┌──────────────────────┐
+                 │   Content Script      │
+                 │                       │
+                 │  InputObserver        │  Watches input, debounces (2s)
+                 │       |               │
+                 │  Tier 0: Heuristic    │  Local regex + keyword scoring (< 5ms)
+                 │       |               │
+                 │  score < 0.3? ──STOP  │  Most messages end here. Zero cost.
+                 │       |               │
+                 │  TriggerIcon ⚠️       │  "Review tone" badge near Send
+                 └───────┬───────────────┘
+                         │ chrome.runtime.sendMessage
+                         v
+                 ┌──────────────────────┐
+                 │   Service Worker      │
+                 │                       │
+                 │  Tier 1: On-device AI │  Chrome built-in AI (free, optional)
+                 │       |               │
+                 │  confident? ──DONE    │  Returns analysis + rewrites
+                 │       |               │
+                 │  Tier 2: Gemini API   │  Gemini 2.5 Flash with streaming
+                 │       |               │
+                 │  PopupCard ← results  │  3 rewrite options + risk assessment
+                 └──────────────────────┘
+```
+
+The three tiers cascade: each one only fires if the previous tier isn't confident enough. For most messages, everything resolves locally in under 5 milliseconds with zero network calls.
+
+For a deep dive into the architecture, read **[docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)**.
 
 ---
 
 ## Development
 
-### [ ] Project structure
+### Prerequisites
 
-```
-reword/
-├── src/
-│   ├── shared/          # Types, constants, storage, Gemini prompts
-│   ├── content/         # Content script (runs inside the webpage)
-│   │   ├── index.ts     # Entry point — wires everything together
-│   │   ├── observer.ts  # Watches the input field with debounce
-│   │   ├── heuristic-scorer.ts  # Fast local tone check (no API)
-│   │   ├── trigger.ts   # "Review tone" badge
-│   │   └── popup-card.ts        # Rewrite popup card
-│   ├── background/      # Service worker (AI logic, storage)
-│   │   ├── service-worker.ts    # Message router + AI orchestration
-│   │   ├── gemini-client.ts     # Gemini 2.5 Flash with streaming
-│   │   └── ondevice-client.ts   # Chrome built-in AI (optional)
-│   ├── adapters/        # Platform-specific DOM knowledge
-│   │   ├── base.ts      # Interface + generic fallback
-│   │   ├── gmail.ts
-│   │   ├── linkedin.ts
-│   │   └── twitter.ts
-│   └── options/         # Settings page
-├── tests/               # Vitest unit tests + DOM fixtures
-├── docs/
-│   └── HOW_IT_WORKS.md  # In-depth architecture guide
-├── manifest.json
-└── dist/                # Built output (git-ignored)
-```
+- Chromium-based browser (Chrome, Edge, Brave, Arc)
+- Node.js 18+
+- A free [Gemini API key](https://aistudio.google.com/apikey)
 
-For a deep dive into how everything connects, read **[docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)**.
-
-### [ ] Available scripts
-
-| Command | What it does |
-|---|---|
-| `npm run dev` | Build in watch mode — rebuilds on every file save |
-| `npm run build` | Production build → `dist/` |
-| `npm test` | Run all unit tests once |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run test:e2e` | Run Playwright end-to-end tests |
-
-### [ ] Development workflow
+### Dev Workflow
 
 ```bash
-# Terminal 1: rebuild on save
+# Terminal 1: rebuild on every file save
 npm run dev
 
 # Terminal 2: run tests in watch mode
 npm run test:watch
 ```
 
-After any code change, go to `chrome://extensions/` and click the **↺ refresh** icon on the Reword card to reload the extension.
+After changes, go to `chrome://extensions/` and click the refresh icon on the Reword card.
 
-### [ ] Running tests
+### Available Scripts
 
-```bash
-npm test
-```
+| Command | Description |
+|---|---|
+| `npm run dev` | Build in watch mode |
+| `npm run build` | Production build to `dist/` |
+| `npm test` | Run all unit tests once |
+| `npm run test:watch` | Tests in watch mode |
+| `npm run test:e2e` | Playwright end-to-end tests |
+| `npm run lint` | ESLint check |
+| `npm run lint:fix` | ESLint with auto-fix |
+| `npm run format` | Format with Prettier |
+| `npm run format:check` | Check formatting |
 
-All 42 unit tests should pass. Tests use [Vitest](https://vitest.dev/) with a jsdom environment — no browser needed.
+### Testing
 
-Key test files:
+All 42 unit tests use [Vitest](https://vitest.dev/) with jsdom — no browser needed. E2E tests use [Playwright](https://playwright.dev/) with a real Chromium instance.
 
-| File | What's tested |
+Key test areas:
+
+| Test file | Coverage |
 |---|---|
 | `tests/content/heuristic-scorer.test.ts` | Tone scoring (passive-aggression, ALL CAPS, etc.) |
 | `tests/content/observer.test.ts` | Debounce + generation counter |
@@ -155,82 +176,69 @@ Key test files:
 | `tests/background/service-worker.test.ts` | Message routing + tier orchestration |
 | `tests/adapters/*.test.ts` | Per-platform DOM selectors |
 
-### [ ] Adding a new platform
+### Project Structure
 
-1. Create `src/adapters/yourplatform.ts` implementing 4 methods:
+```
+src/
+  adapters/           # Platform-specific DOM adapters (Gmail, LinkedIn, Twitter, Slack, Discord)
+  background/         # Service worker: AI orchestration, Gemini client, on-device AI
+  content/            # Content script: observer, heuristic scorer, trigger badge, popup card
+  options/            # Settings page (API key, sensitivity, relationship profiles)
+  shared/             # Types, constants, storage wrapper, AI prompt templates
+tests/
+  mocks/              # Chrome storage mocks, DOM fixtures, Gemini client mock
+docs/
+  HOW_IT_WORKS.md     # In-depth architecture guide
+  ROADMAP.md          # Feature roadmap
+```
+
+### Adding a New Platform
+
+1. Create `src/adapters/yourplatform.ts` implementing the `PlatformAdapter` interface:
    - `findInputField()` — locate the compose box
    - `placeTriggerIcon()` — pin the badge near Send
    - `writeBack(text)` — replace the input text
    - `scrapeThreadContext()` — return recent messages (or `[]`)
+2. Register it in `src/content/index.ts`
+3. Add host permissions and content script matches in `manifest.json`
+4. Create a DOM fixture in `tests/mocks/mock-dom-fixtures/` and write adapter tests
 
-2. Register it in `src/content/index.ts`:
-   ```typescript
-   import { YourPlatformAdapter } from '../adapters/yourplatform';
-   if (host === 'yourplatform.com') return new YourPlatformAdapter();
-   ```
+### Tuning the AI
 
-3. Add host permissions in `manifest.json`:
-   ```json
-   "host_permissions": ["https://yourplatform.com/*"]
-   ```
+**Heuristic scorer** (`src/content/heuristic-scorer.ts`): Add regex patterns to `PASSIVE_AGGRESSIVE_PATTERNS` (+0.35 each) or keywords to `NEGATIVE_KEYWORDS` (+0.2 each). Threshold: `HEURISTIC_THRESHOLD = 0.3`.
 
-4. Add a DOM fixture in `tests/mocks/mock-dom-fixtures/` and write tests.
-
-### [ ] Changing the AI prompts
-
-Prompts live in `src/shared/prompts.ts`. The `buildAnalysisPrompt()` function assembles the Gemini prompt from:
-- Relationship-specific instructions (`romantic` / `workplace` / `family`)
-- Sensitivity instructions (`low` / `medium` / `high`)
-- The draft message and optional thread context
-
-The expected response format is structured JSON — see `parseAnalysisResponse()` in `src/background/gemini-client.ts` for the schema.
-
-### [ ] Changing the heuristic scorer
-
-The local scorer (`src/content/heuristic-scorer.ts`) is intentionally simple — regex patterns and keyword lists. No ML, no network. To tune it:
-
-- Add patterns to `PASSIVE_AGGRESSIVE_PATTERNS` (each match adds 0.35 to score)
-- Add keywords to `NEGATIVE_KEYWORDS` (each match adds 0.2)
-- Threshold is `HEURISTIC_THRESHOLD = 0.3` in `src/shared/constants.ts`
+**Gemini prompts** (`src/shared/prompts.ts`): The `buildAnalysisPrompt()` function assembles prompts from relationship type, sensitivity level, draft text, and thread context. Response schema is in `src/background/gemini-client.ts`.
 
 ---
 
-## Architecture Overview
+## Roadmap
 
-```
-Chrome Tab (Gmail, LinkedIn, Twitter)
-│
-├── content.js  ←──────────────────────────────────────────────────┐
-│   ├── InputObserver (debounce 2s)                                │
-│   ├── Tier 0: heuristic scorer (< 5ms, no network)              │
-│   ├── TriggerIcon                                                │
-│   └── PopupCard                                                  │
-│         │  chrome.runtime.sendMessage                            │
-│         ▼                                                        │
-├── service-worker.js                                              │
-│   ├── Tier 1: Chrome on-device AI (optional, free)              │
-│   ├── Tier 2: Gemini 2.5 Flash (streaming)                      │
-│   └── chrome.storage.local (settings, profiles, stats)          │
-│                                                                  │
-└── options.html ────────────────────────────────────────────────-┘
-    ├── API key management
-    ├── Relationship profiles
-    └── Sensitivity settings
-```
+A few things coming next — see the full list in **[docs/ROADMAP.md](docs/ROADMAP.md)**:
 
-Full explanation with step-by-step message flow: **[docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)**
+- **Multi-language support** — Spanish, French, Mandarin, and more
+- **Thread-aware rewrites** — de-escalate ongoing tension, not just single messages
+- **Claude and OpenAI backends** — choose your preferred AI provider
+- **Local LLM support** — Ollama for fully offline, fully private analysis
+- **Firefox and Safari** — cross-browser support
+- **Plugin API** — add platforms and rules without forking
 
 ---
 
 ## Contributing
 
-1. Fork the repo and create a feature branch
-2. Write tests first (TDD)
-3. Make sure `npm test` passes
+Contributions are welcome. Here's the short version:
+
+1. Fork the repo, create a feature branch
+2. Write tests first (TDD encouraged)
+3. Make sure `npm test` and `npm run lint` pass
 4. Open a pull request
+
+Check [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines, and browse existing issues for good first tasks.
 
 ---
 
 ## License
 
-MIT
+[MIT](LICENSE) — use it, fork it, ship it. Just keep the license file.
+
+Built with care by contributors who believe the internet could use a little more kindness.

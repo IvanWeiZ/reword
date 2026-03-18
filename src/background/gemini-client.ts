@@ -53,22 +53,28 @@ export class GeminiClient {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
-    const timeoutId = setTimeout(() => {
-      if (!signal?.aborted) {
-        throw new DOMException('API call timed out', 'TimeoutError');
-      }
-    }, API_TIMEOUT_MS);
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), API_TIMEOUT_MS);
+
+    // Forward caller's abort to our controller
+    const onCallerAbort = () => timeoutController.abort();
+    signal?.addEventListener('abort', onCallerAbort);
 
     let fullText = '';
     try {
       for await (const chunk of streamResult.stream) {
-        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+        if (timeoutController.signal.aborted) {
+          throw signal?.aborted
+            ? new DOMException('Aborted', 'AbortError')
+            : new DOMException('API call timed out', 'TimeoutError');
+        }
         const chunkText = chunk.text();
         fullText += chunkText;
         onStream(fullText);
       }
     } finally {
       clearTimeout(timeoutId);
+      signal?.removeEventListener('abort', onCallerAbort);
     }
 
     return parseAnalysisResponse(fullText);

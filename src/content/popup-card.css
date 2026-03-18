@@ -1,3 +1,4 @@
+/* Light mode (default) */
 .reword-card {
   position: fixed;
   bottom: 80px;
@@ -5,10 +6,10 @@
   width: 400px;
   max-height: 80vh;
   overflow-y: auto;
-  background: #1a1a2e;
-  color: #e0e0e0;
+  background: #ffffff;
+  color: #1a1a2e;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   padding: 20px;
   z-index: 99999;
   font-size: 14px;
@@ -32,7 +33,7 @@
 }
 
 .reword-original {
-  background: #2a2a3e;
+  background: #f5f5f5;
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -41,7 +42,7 @@
 
 .reword-original-label {
   font-size: 11px;
-  color: #888;
+  color: #666;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
@@ -49,7 +50,7 @@
 
 .reword-explanation {
   font-size: 13px;
-  color: #aaa;
+  color: #666;
   margin-bottom: 16px;
 }
 
@@ -60,10 +61,10 @@
 }
 
 .reword-rewrite-option {
-  background: #2a2a3e;
+  background: #f5f5f5;
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid #444;
+  border: 1px solid #ddd;
   cursor: pointer;
 }
 
@@ -75,7 +76,7 @@
   font-size: 11px;
   font-weight: 600;
   margin-bottom: 4px;
-  color: #aaa;
+  color: #666;
 }
 
 .reword-actions {
@@ -92,7 +93,99 @@
   cursor: pointer;
   background: none;
   border: none;
-  color: #888;
+  color: #666;
 }
 
-.reword-send-original:hover, .reword-cancel:hover { color: #ccc; }
+.reword-send-original:hover, .reword-cancel:hover {
+  color: #333;
+}
+
+.reword-rewrite-shortcut {
+  font-size: 10px;
+  color: #999;
+  opacity: 0.6;
+}
+
+.reword-rewrite-option .reword-rewrite-shortcut {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+}
+
+.reword-actions .reword-rewrite-shortcut {
+  position: static;
+  margin-left: 4px;
+}
+
+/* Diff highlighting */
+.reword-diff-added {
+  background: #e8f5e9;
+  font-weight: bold;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.reword-diff-removed {
+  background: #ffebee;
+  text-decoration: line-through;
+  opacity: 0.7;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.reword-rewrite-diff {
+  line-height: 1.6;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .reword-card {
+    background: #1e1e2e;
+    color: #e0e0e0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  .reword-original {
+    background: #2a2a3e;
+    border-left-color: #aaa;
+  }
+
+  .reword-original-label {
+    color: #aaa;
+  }
+
+  .reword-explanation {
+    color: #aaa;
+  }
+
+  .reword-rewrite-option {
+    background: #2a2a3e;
+    border-color: #444;
+  }
+
+  .reword-rewrite-option:hover {
+    border-color: #6366f1;
+  }
+
+  .reword-rewrite-label {
+    color: #aaa;
+  }
+
+  .reword-send-original, .reword-cancel {
+    color: #aaa;
+  }
+
+  .reword-send-original:hover, .reword-cancel:hover {
+    color: #ccc;
+  }
+
+  .reword-diff-added {
+    background: #1b5e20;
+    color: #a5d6a7;
+  }
+
+  .reword-diff-removed {
+    background: #b71c1c;
+    color: #ef9a9a;
+  }
+}

@@ -1,4 +1,6 @@
 import type { AnalysisResult, Theme } from '../shared/types';
+import { detectPlatformDarkMode } from './dark-mode-detect';
+import { renderDiffHTML } from './helpers';
 
 interface PopupCardOptions {
   onRewrite: (text: string) => void;
@@ -34,9 +36,11 @@ export class PopupCard {
     this.updateThemeStyles();
   }
 
-  private isDark(): boolean {
+  isDark(): boolean {
     if (this.theme === 'dark') return true;
     if (this.theme === 'light') return false;
+    // Check platform-specific dark mode before falling back to OS preference
+    if (detectPlatformDarkMode()) return true;
     return window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? true;
   }
 
@@ -55,7 +59,7 @@ export class PopupCard {
 
   private buildCSS(): string {
     const dark = this.isDark();
-    const bg = dark ? '#1a1a2e' : '#ffffff';
+    const bg = dark ? '#1e1e2e' : '#ffffff';
     const text = dark ? '#e0e0e0' : '#1a1a2e';
     const cardBg = dark ? '#2a2a3e' : '#f5f5f5';
     const border = dark ? '#444' : '#ddd';
@@ -88,6 +92,9 @@ export class PopupCard {
       .reword-incoming-indicator { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-family: system-ui; }
       .reword-incoming-tooltip { position: absolute; background: ${bg}; color: ${text}; padding: 12px; border-radius: 8px; box-shadow: 0 4px 16px ${shadow}; z-index: 99998; max-width: 300px; font-size: 13px; font-family: system-ui; }
       .reword-btn-muted { background: ${mutedBg}; color: ${text}; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+      .reword-diff-added { background: ${dark ? '#1b5e20' : '#e8f5e9'}; color: ${dark ? '#a5d6a7' : 'inherit'}; font-weight: bold; padding: 1px 3px; border-radius: 3px; }
+      .reword-diff-removed { background: ${dark ? '#b71c1c' : '#ffebee'}; color: ${dark ? '#ef9a9a' : 'inherit'}; text-decoration: line-through; opacity: 0.7; padding: 1px 3px; border-radius: 3px; }
+      .reword-rewrite-diff { line-height: 1.6; }
     `;
   }
 
@@ -113,17 +120,17 @@ export class PopupCard {
             (r, i) => `
           <div class="reword-rewrite-option" data-index="${i}">
             <div class="reword-rewrite-label">${this.esc(r.label)}</div>
-            <div>${this.esc(r.text)}</div>
-            <span class="reword-rewrite-shortcut">${i + 1}</span>
+            <div class="reword-rewrite-diff">${renderDiffHTML(originalText, r.text)}</div>
+            <span class="reword-rewrite-shortcut">⌥${i + 1}</span>
           </div>
         `,
           )
           .join('')}
       </div>
-      <div class="reword-shortcut-hint">Press 1-${result.rewrites.length} to quick-accept, Esc to close</div>
+      <div class="reword-shortcut-hint">Press ⌥1–${result.rewrites.length} to quick-accept · Enter to send original · Esc to close</div>
       <div class="reword-actions">
-        <button class="reword-send-original">Send original</button>
-        <button class="reword-cancel">Cancel</button>
+        <button class="reword-send-original">Send original <span class="reword-rewrite-shortcut">Enter</span></button>
+        <button class="reword-cancel">Cancel <span class="reword-rewrite-shortcut">Esc</span></button>
       </div>
     `;
 
@@ -207,7 +214,15 @@ export class PopupCard {
         return;
       }
 
-      // Number keys 1-9 for quick rewrite selection
+      // Enter sends original (dismiss)
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.options.onDismiss();
+        this.hide();
+        return;
+      }
+
+      // Number keys 1-9 (plain or Alt+) for quick rewrite selection
       const num = parseInt(e.key, 10);
       if (num >= 1 && num <= result.rewrites.length) {
         e.preventDefault();

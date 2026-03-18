@@ -1,25 +1,22 @@
 {
   "name": "reword",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "description": "Chrome extension that flags problematic tone and suggests kinder rewrites before you hit Send",
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
     "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts'"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["chrome-extension", "tone-checker", "ai", "communication", "gemini", "rewrite"],
+  "author": "IvanWeiZ",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "@google/generative-ai": "^0.24.1"

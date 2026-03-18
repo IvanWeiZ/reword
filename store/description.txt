@@ -1,0 +1,68 @@
+SHORT DESCRIPTION (132 characters max):
+Catch passive-aggressive tone in Gmail, LinkedIn & Twitter. Get AI-powered kinder rewrites before you hit Send. Privacy-first.
+
+---
+
+FULL DESCRIPTION (Chrome Web Store):
+
+Stop sending messages you'll regret.
+
+We've all been there. You're frustrated, you type something sharp, and you hit Send. Five minutes later, you wish you hadn't. Reword catches those moments before they happen.
+
+HOW IT WORKS
+
+Reword watches as you compose messages in Gmail, LinkedIn, and Twitter/X. When it detects passive-aggression, dismissiveness, or harsh tone, a subtle "Review tone" badge appears near the Send button. Click it to see three AI-powered rewrites:
+
+  - Warmer — empathetic and friendly
+  - Direct but kind — clear without the edge
+  - Minimal change — smallest possible fix
+
+Pick one with a single click, or send your original. You're always in control.
+
+SMART THREE-TIER AI
+
+Most messages are checked instantly with a local heuristic — no network call, no delay. Only flagged messages go to AI:
+
+  1. Local keyword and pattern analysis (under 5ms)
+  2. Chrome's built-in on-device AI (free, no API key needed)
+  3. Gemini 2.5 Flash for nuanced cases (uses your own API key)
+
+This means most of your writing never leaves your browser.
+
+RELATIONSHIP-AWARE REWRITES
+
+Configure relationship contexts per platform — workplace, romantic, or family. Reword adjusts its suggestions based on who you're talking to. A message to your partner gets different rewrites than one to your manager.
+
+PRIVACY-FIRST DESIGN
+
+  - No account required
+  - No data sent to our servers — we don't have servers
+  - No analytics, no tracking, no cookies
+  - Settings stored locally in your browser
+  - AI analysis uses your own Gemini API key
+  - Open source (MIT license) — read every line of code yourself
+
+WORKS WHERE YOU ALREADY MESSAGE
+
+  - Gmail (compose, reply, forward)
+  - LinkedIn (messages, connection requests)
+  - Twitter/X (DMs, tweets, replies)
+  - Slack (coming soon)
+  - Discord (coming soon)
+
+PERFECT FOR
+
+  - Professionals who want to communicate clearly without burning bridges
+  - Anyone who tends to write sharp messages when frustrated
+  - Remote workers where tone is easily misread
+  - Managers and team leads who set the communication tone
+  - Non-native English speakers who want to nail the right tone
+
+GETTING STARTED
+
+  1. Install Reword
+  2. Get a free Gemini API key from Google AI Studio
+  3. Open Reword options and paste your key
+  4. Start composing — Reword works automatically
+
+Keywords: tone checker, email rewrite, passive aggressive detector, communication tool, Gmail tone, LinkedIn messages, professional writing, workplace communication, email assistant, message rewriter, tone analyzer, kind communication

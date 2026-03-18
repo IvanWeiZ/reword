@@ -42,14 +42,20 @@ describe('GmailAdapter', () => {
     expect(adapter.placeTriggerIcon(icon)).toBeNull();
   });
 
-  it('writeBack returns a boolean', () => {
+  it('writeBack returns true when input exists', () => {
     const result = adapter.writeBack('Hello, this is a nicer message');
-    expect(typeof result).toBe('boolean');
+    expect(result).toBe(true);
   });
 
   it('writeBack returns false when no input exists', () => {
     document.body.innerHTML = '<div>empty</div>';
     expect(adapter.writeBack('test')).toBe(false);
+  });
+
+  it('writeBack replaces existing content in the compose field', () => {
+    adapter.writeBack('Rewritten email body');
+    const input = adapter.findInputField();
+    expect(input?.textContent).toBe('Rewritten email body');
   });
 
   it('scrapeThreadContext returns an array', () => {
@@ -95,6 +101,70 @@ describe('GmailAdapter', () => {
     `;
     const context = adapter.scrapeThreadContext();
     expect(context[0].text.length).toBeLessThanOrEqual(500);
+  });
+
+  it('scrapeThreadContext returns empty array when no thread messages exist', () => {
+    document.body.innerHTML = '<div>No thread</div>';
+    const context = adapter.scrapeThreadContext();
+    expect(context).toEqual([]);
+  });
+
+  it('scrapeThreadContext identifies "me" (lowercase) as self', () => {
+    document.body.innerHTML = `
+      <div class="adn">
+        <span class="gD" name="me"></span>
+        <div class="a3s aiL">My lowercase reply</div>
+      </div>
+    `;
+    const context = adapter.scrapeThreadContext();
+    expect(context[0].sender).toBe('self');
+  });
+
+  it('scrapeThreadContext treats missing sender name as other', () => {
+    document.body.innerHTML = `
+      <div class="adn">
+        <div class="a3s aiL">Message with no sender element</div>
+      </div>
+    `;
+    const context = adapter.scrapeThreadContext();
+    expect(context[0].sender).toBe('other');
+  });
+
+  it('scrapeThreadContext skips messages with empty text content', () => {
+    document.body.innerHTML = `
+      <div class="adn">
+        <span class="gD" name="Person"></span>
+        <div class="a3s aiL">   </div>
+      </div>
+      <div class="adn">
+        <span class="gD" name="Person"></span>
+        <div class="a3s aiL">Actual content here</div>
+      </div>
+    `;
+    const context = adapter.scrapeThreadContext();
+    expect(context.length).toBe(1);
+    expect(context[0].text).toBe('Actual content here');
+  });
+
+  it('scrapeThreadContext preserves message order', () => {
+    document.body.innerHTML = `
+      <div class="adn">
+        <span class="gD" name="Alice"></span>
+        <div class="a3s aiL">First message</div>
+      </div>
+      <div class="adn">
+        <span class="gD" name="Me"></span>
+        <div class="a3s aiL">Second message</div>
+      </div>
+      <div class="adn">
+        <span class="gD" name="Alice"></span>
+        <div class="a3s aiL">Third message</div>
+      </div>
+    `;
+    const context = adapter.scrapeThreadContext();
+    expect(context[0].text).toBe('First message');
+    expect(context[1].text).toBe('Second message');
+    expect(context[2].text).toBe('Third message');
   });
 
   describe('checkHealth', () => {
