@@ -7,6 +7,7 @@ import {
   renderPatterns,
   renderPersonas,
   renderSuppressedPhrases,
+  renderLearnedPreferences,
 } from './renderers';
 
 let data: StoredData;
@@ -168,6 +169,13 @@ function bindEvents() {
     } catch (error) {
       console.warn('[Reword] Import failed:', error);
     }
+  });
+
+  // Reset learned preferences (adaptive false positive reduction)
+  document.getElementById('reset-learned-preferences')!.addEventListener('click', async () => {
+    data.stats.dismissedCategories = {};
+    await saveStoredData(data);
+    renderLearnedPreferences(data);
   });
 }
 

@@ -24,6 +24,7 @@ function setupDOM() {
     <div id="patterns-list"></div>
     <div id="personas-list"></div>
     <div id="suppressed-list"></div>
+    <div id="learned-preferences"></div>
     <div id="stats"></div>
     <div id="history"></div>
   `;

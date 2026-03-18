@@ -47,6 +47,8 @@ function setupDOM() {
     <input id="new-persona-instruction" type="text" />
     <button id="add-persona">Add Persona</button>
     <div id="suppressed-list"></div>
+    <div id="learned-preferences"></div>
+    <button id="reset-learned-preferences">Reset learned preferences</button>
     <div id="stats"></div>
     <div id="history"></div>
     <button id="export-data">Export</button>

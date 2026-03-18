@@ -1,5 +1,6 @@
 import type { StoredData } from '../shared/types';
 import { saveStoredData } from '../shared/storage';
+import { DISMISS_SUPPRESS_THRESHOLD } from '../shared/constants';
 
 /** HTML-escape a string to prevent XSS. */
 export function esc(text: string): string {
@@ -159,6 +160,22 @@ export function renderHistory(data: StoredData) {
     .join('');
 }
 
+export function renderLearnedPreferences(data: StoredData) {
+  const container = document.getElementById('learned-preferences')!;
+  const categories = data.stats.dismissedCategories;
+  const entries = Object.entries(categories);
+  if (entries.length === 0) {
+    container.innerHTML = '<p class="hint">No learned preferences yet.</p>';
+    return;
+  }
+  container.innerHTML = entries
+    .map(
+      ([category, count]) =>
+        `<div class="learned-pref-item"><span>${esc(category)}: ${count} dismiss${count === 1 ? '' : 'es'}${count >= DISMISS_SUPPRESS_THRESHOLD ? ' (threshold raised)' : ''}</span></div>`,
+    )
+    .join('');
+}
+
 export function renderAll(data: StoredData) {
   const keyInput = document.getElementById('api-key') as HTMLInputElement;
   if (data.settings.geminiApiKey) {
@@ -179,6 +196,7 @@ export function renderAll(data: StoredData) {
   renderPatterns(data);
   renderPersonas(data);
   renderSuppressedPhrases(data);
+  renderLearnedPreferences(data);
   renderStats(data);
   renderHistory(data);
 }
