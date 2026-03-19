@@ -1,11 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { launchWithExtension } from './helpers';
-import type { BrowserContext, Page } from '@playwright/test';
-import { createServer, type Server } from 'http';
+import type { BrowserContext } from '@playwright/test';
 
 let context: BrowserContext;
-let server: Server;
-let serverPort: number;
 
 // Serve pages with correct structure for content script detection
 function servePage(html: string, hostname: string): string {
