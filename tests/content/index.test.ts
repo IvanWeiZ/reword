@@ -309,6 +309,8 @@ describe('content script init() orchestration', () => {
     vi.doMock('../../src/content/helpers', () => ({
       normalizeSnippet: (text: string) => text.toLowerCase().slice(0, 60),
       deriveRecipientStyle: () => undefined,
+      renderDiffHTML: (original: string, rewritten: string) =>
+        `<span class="reword-diff-removed">${original}</span> <span class="reword-diff-added">${rewritten}</span>`,
     }));
 
     vi.doMock('../../src/content/incoming-analyzer', () => ({
@@ -516,6 +518,31 @@ describe('content script init() orchestration', () => {
       const flagMsg = flagCalls[0][0] as Extract<MessageToBackground, { type: 'record-flag' }>;
       expect(flagMsg.event.platform).toBe('generic');
       expect(flagMsg.event.riskLevel).toBe('medium');
+    });
+
+    it('renders inline diff HTML in rewrite buttons when rewrites are present', async () => {
+      sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
+        if (msg.type === 'get-settings') return settingsResponse();
+        if (msg.type === 'analyze') return analysisResultResponse(true);
+        if (msg.type === 'record-flag') return settingsResponse();
+        return settingsResponse();
+      });
+
+      await loadContentScript();
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
+
+      createEditableAndType('This is stupid and pathetic!!');
+      await fireDebounceTimers();
+
+      const banner = document.getElementById('reword-warning-banner');
+      expect(banner).not.toBeNull();
+
+      const rewriteBtn = banner!.querySelector('.reword-use-rewrite');
+      expect(rewriteBtn).not.toBeNull();
+
+      const btnHTML = rewriteBtn!.innerHTML;
+      expect(btnHTML).toContain('reword-diff-added');
+      expect(btnHTML).toContain('reword-diff-removed');
     });
   });
 

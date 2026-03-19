@@ -7,7 +7,7 @@ import type {
 import { MIN_MESSAGE_LENGTH, HEURISTIC_THRESHOLD, AI_DEBOUNCE_MS } from '../shared/constants';
 import { scoreMessage } from './heuristic-scorer';
 import { PopupCard } from './popup-card';
-import { normalizeSnippet } from './helpers';
+import { normalizeSnippet, renderDiffHTML } from './helpers';
 import {
   GmailAdapter, LinkedInAdapter, TwitterAdapter, SlackAdapter,
   DiscordAdapter, OutlookAdapter, TeamsAdapter, WhatsAppAdapter,
@@ -68,6 +68,8 @@ function createWarningBanner(): {
             vertical-align: middle; margin-right: 8px;
           }
           .reword-checking { animation: reword-pulse 1.5s ease-in-out infinite; }
+          .reword-diff-added { background: rgba(34,197,94,0.2); color: #166534; padding: 1px 3px; border-radius: 3px; }
+          .reword-diff-removed { text-decoration: line-through; opacity: 0.5; color: #991b1b; padding: 1px 3px; }
         </style>
         <div style="display:flex;align-items:center;gap:12px;">
           <span style="font-size:24px;">⚠️</span>
@@ -82,12 +84,12 @@ function createWarningBanner(): {
         banner.style.display = 'none';
       });
     },
-    showAnalysis(result: AnalysisResult, _originalText: string) {
+    showAnalysis(result: AnalysisResult, originalText: string) {
       const issueList = result.issues.map(i => `<li>${i}</li>`).join('');
       const rewriteButtons = result.rewrites.map((r, i) => `
         <button class="reword-use-rewrite" data-index="${i}"
           style="background:white;color:#333;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;text-align:left;margin:4px 0;width:100%;">
-          <strong>${r.tone}:</strong> ${r.text.slice(0, 120)}${r.text.length > 120 ? '...' : ''}
+          <strong>${r.tone}:</strong> ${renderDiffHTML(originalText, r.text)}
         </button>`).join('');
 
       content.innerHTML = `
