@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Test Page</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 20px; background: #f3f2ef; }
+    .msg-form__msg-content-container { border: 1px solid #e0e0e0; border-radius: 8px; background: #fff; padding: 8px; max-width: 600px; margin: 40px auto; }
+    .msg-form__msg-content-container--scrollable { min-height: 60px; max-height: 200px; overflow-y: auto; }
+    .msg-form__contenteditable { min-height: 40px; padding: 8px; outline: none; font-size: 14px; color: rgba(0,0,0,0.9); }
+    .msg-form__contenteditable:empty::before { content: attr(data-placeholder); color: rgba(0,0,0,0.6); pointer-events: none; }
+    .msg-form__placeholder { display: none; }
+    .msg-form__right-actions { display: flex; justify-content: flex-end; padding: 8px; }
+    .msg-form__send-button { background: #0a66c2; color: #fff; border: none; border-radius: 16px; padding: 6px 16px; font-size: 14px; cursor: pointer; }
+    .msg-form__send-button:hover { background: #004182; }
+    #sent-log, #message-log { max-width: 600px; margin: 20px auto; padding: 10px; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px; color: #666; min-height: 20px; }
+    #sent-log::before { content: "Sent log: "; font-weight: bold; }
+    #message-log::before { content: "Message log: "; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div id="interop-outlet" data-testid="interop-shadowdom" class="theme--light" style="width: 100vw; position: absolute; z-index: 500; font-size: 1.6rem; visibility: visible;">
+    <div class="msg-form__msg-content-container msg-form__message-texteditor relative flex-grow-1 display-flex">
+      <div class="msg-form__msg-content-container--scrollable scrollable relative">
+        <div class="flex-grow-1 relative">
+          <div class="msg-form__contenteditable t-14 t-black--light t-normal flex-grow-1 full-height notranslate"
+               contenteditable="true" role="textbox" dir="auto" aria-multiline="true"
+               aria-label="Write a message..." data-placeholder="Write a message..."><p><br></p></div>
+          <div aria-hidden="true" class="msg-form__placeholder t-14 t-black--light t-normal"
+               data-placeholder="Write a message..."></div>
+        </div>
+      </div>
+      <div class="msg-form__right-actions">
+        <button class="msg-form__send-button" type="submit">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sent-log"></div>
+  <div id="message-log"></div>
+
+  <script>
+    const editable = document.querySelector('.msg-form__contenteditable');
+    const sendButton = document.querySelector('.msg-form__send-button');
+    const sentLog = document.getElementById('sent-log');
+    const messageLog = document.getElementById('message-log');
+
+    function sendMessage() {
+      const text = editable.textContent.trim();
+      if (!text || text === '') return;
+      sentLog.textContent += 'SENT ';
+      messageLog.textContent += text + ' | ';
+      editable.innerHTML = '<p><br></p>';
+    }
+
+    // Enter-to-send behavior (like real LinkedIn)
+    editable.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Send button click
+    sendButton.addEventListener('click', function() {
+      sendMessage();
+    });
+  </script>
+</body>
+</html>

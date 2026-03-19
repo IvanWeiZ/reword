@@ -4,7 +4,7 @@
   "description": "Chrome extension that flags problematic tone and suggests kinder rewrites before you hit Send",
   "scripts": {
     "dev": "vite build --watch",
-    "build": "vite build",
+    "build": "npx tsx build.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -14,7 +14,14 @@
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
     "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts'"
   },
-  "keywords": ["chrome-extension", "tone-checker", "ai", "communication", "gemini", "rewrite"],
+  "keywords": [
+    "chrome-extension",
+    "tone-checker",
+    "ai",
+    "communication",
+    "gemini",
+    "rewrite"
+  ],
   "author": "IvanWeiZ",
   "license": "MIT",
   "type": "module",

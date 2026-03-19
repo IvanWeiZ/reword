@@ -1,6 +1,9 @@
 import { defineConfig } from '@playwright/test';
 import { resolve } from 'path';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const extensionPath = resolve(__dirname, 'dist');
 
 export default defineConfig({

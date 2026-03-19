@@ -1,7 +1,11 @@
 import { type BrowserContext, chromium } from '@playwright/test';
 import { resolve } from 'path';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 
-const extensionPath = resolve(__dirname, '../../dist');
+const __filename = fileURLToPath(import.meta.url);
+const __dir = dirname(__filename);
+const extensionPath = resolve(__dir, '../../dist');
 
 /**
  * Launch a Chromium instance with the Reword extension loaded.
@@ -14,10 +18,17 @@ export async function launchWithExtension(): Promise<BrowserContext> {
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
       '--no-sandbox',
+      '--headless=new',
     ],
   });
-  // Wait for the service worker to initialize
-  await context.waitForEvent('serviceworker');
+  // Wait for the service worker to initialize (with timeout fallback)
+  if (context.serviceWorkers().length === 0) {
+    await context.waitForEvent('serviceworker', { timeout: 10000 }).catch(() => {
+      console.log('Service worker not detected, continuing anyway');
+    });
+  }
+  // Give the extension a moment to fully initialize
+  await new Promise(r => setTimeout(r, 1000));
   return context;
 }
 

@@ -2,7 +2,7 @@ import type { StoredData } from './types';
 
 export const DEBOUNCE_MS = 800;
 export const AI_DEBOUNCE_MS = 2000;
-export const MIN_MESSAGE_LENGTH = 15;
+export const MIN_MESSAGE_LENGTH = 3;
 export const HEURISTIC_THRESHOLD = 0.38;
 export const ONDEVICE_CONFIDENCE_THRESHOLD = 0.8;
 export const API_TIMEOUT_MS = 5000;

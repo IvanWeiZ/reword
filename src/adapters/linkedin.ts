@@ -1,17 +1,62 @@
 import type { PlatformAdapter, ThreadMessage } from '../shared/types';
 import { writeBackToElement } from './base';
 
+/** Recursively search through shadow DOM trees */
+function deepQuerySelector(selector: string, root: Document | ShadowRoot | Element = document): HTMLElement | null {
+  // Try direct query first
+  const direct = root.querySelector<HTMLElement>(selector);
+  if (direct) return direct;
+
+  // Search inside shadow roots
+  const allElements = root.querySelectorAll('*');
+  for (const el of allElements) {
+    if (el.shadowRoot) {
+      const found = deepQuerySelector(selector, el.shadowRoot);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 export class LinkedInAdapter implements PlatformAdapter {
   platformName = 'linkedin';
   findInputField(): HTMLElement | null {
-    return document.querySelector<HTMLElement>(
+    const selectors = [
+      'div[role="textbox"][contenteditable="true"]',
       '.msg-form__msg-content-container--scrollable[role="textbox"]',
-    );
+      'div[role="textbox"][contenteditable="true"][data-placeholder]',
+      '.msg-form__contenteditable[role="textbox"]',
+      '[contenteditable="true"][role="textbox"]',
+    ];
+    for (const sel of selectors) {
+      // Try normal DOM first
+      const el = document.querySelector<HTMLElement>(sel);
+      if (el) return el;
+      // Then search shadow DOM
+      const shadow = deepQuerySelector(sel);
+      if (shadow) return shadow;
+    }
+    return null;
   }
 
   placeTriggerIcon(icon: HTMLElement): (() => void) | null {
-    const actionsRow = document.querySelector('.msg-form__right-actions');
-    if (!actionsRow) return null;
+    const actionsRow =
+      document.querySelector('.msg-form__right-actions') ??
+      document.querySelector('.msg-form__footer') ??
+      document.querySelector('.msg-form')?.querySelector('[class*="actions"]');
+    if (!actionsRow) {
+      // Fallback: place near the input field itself
+      const input = this.findInputField();
+      if (!input?.parentElement) return null;
+      icon.style.display = 'inline-flex';
+      icon.style.position = 'absolute';
+      icon.style.right = '8px';
+      icon.style.top = '8px';
+      icon.style.zIndex = '1000';
+      input.parentElement.style.position = 'relative';
+      input.parentElement.appendChild(icon);
+      return () => icon.remove();
+    }
     icon.style.display = 'inline-flex';
     icon.style.alignItems = 'center';
     icon.style.marginRight = '8px';
@@ -55,6 +100,12 @@ export class LinkedInAdapter implements PlatformAdapter {
       }
     }
     return els.slice(-5);
+  }
+
+  findSendButton(): HTMLElement | null {
+    return document.querySelector<HTMLElement>('.msg-form__send-button') ??
+      document.querySelector<HTMLElement>('button[type="submit"].msg-form__send-btn') ??
+      document.querySelector<HTMLElement>('.msg-form button[type="submit"]');
   }
 
   placeIncomingIndicator(messageEl: HTMLElement, indicator: HTMLElement): (() => void) | null {

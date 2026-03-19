@@ -48,6 +48,11 @@ export class GmailAdapter implements PlatformAdapter {
     return messages.slice(-10);
   }
 
+  findSendButton(): HTMLElement | null {
+    return document.querySelector<HTMLElement>('div[role="button"][data-tooltip*="Send"]') ??
+      document.querySelector<HTMLElement>('.btC .dC div[role="button"]');
+  }
+
   getIncomingMessageElements(): HTMLElement[] {
     const els: HTMLElement[] = [];
     const messageEls = document.querySelectorAll<HTMLElement>('.a3s.aiL');

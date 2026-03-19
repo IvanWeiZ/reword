@@ -45,7 +45,6 @@ function setupChromeMock() {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Default settings response used by init() */
 function settingsResponse(overrides: Partial<StoredData['settings']> = {}): MessageFromBackground {
   return {
     type: 'settings',
@@ -54,14 +53,6 @@ function settingsResponse(overrides: Partial<StoredData['settings']> = {}): Mess
       settings: { ...DEFAULT_STORED_DATA.settings, ...overrides },
     },
   };
-}
-
-function suppressionResponse(suppressed: boolean): MessageFromBackground {
-  return { type: 'suppression-result', suppressed };
-}
-
-function profileResponse(): MessageFromBackground {
-  return { type: 'profile', profile: null };
 }
 
 function analysisResultResponse(shouldFlag: boolean): MessageFromBackground {
@@ -75,24 +66,95 @@ function analysisResultResponse(shouldFlag: boolean): MessageFromBackground {
   return { type: 'analysis-result', result };
 }
 
+// Save all originals once at module level (before any wrapping)
+const _realSetTimeout = globalThis.setTimeout;
+const _realClearTimeout = globalThis.clearTimeout;
+const _realSetInterval = globalThis.setInterval;
+const _realClearInterval = globalThis.clearInterval;
+const _origDocAdd = Document.prototype.addEventListener;
+const _origDocRemove = Document.prototype.removeEventListener;
+const _origWinAdd = window.addEventListener.bind(window);
+const _origWinRemove = window.removeEventListener.bind(window);
+
+/**
+ * Flush pending microtasks/promises.
+ */
+function flushAsync(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    let rounds = 0;
+    function tick() {
+      if (rounds++ < 5) {
+        _realSetTimeout(tick, 0);
+      } else {
+        resolve();
+      }
+    }
+    tick();
+  });
+}
+
 // ---------------------------------------------------------------------------
-// 1. detectAdapter() — test via side-effect import
-//    Because detectAdapter is a module-private function called inside init(),
-//    we test its behavior by observing which adapter's platformName shows up
-//    in the record-flag message sent by the full pipeline.  However, we can
-//    also extract the logic into a simpler unit test by re-exporting it via
-//    a small wrapper. Instead, we test it indirectly by setting
-//    window.location.hostname and importing adapters directly.
+// Event listener tracker
+// ---------------------------------------------------------------------------
+
+type ListenerRecord = {
+  target: EventTarget;
+  type: string;
+  listener: EventListenerOrEventListenerObject;
+  options?: boolean | AddEventListenerOptions;
+};
+
+let registeredListeners: ListenerRecord[] = [];
+
+function installListenerTracking() {
+  document.addEventListener = function (
+    this: Document,
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions,
+  ) {
+    registeredListeners.push({ target: this, type, listener, options });
+    return _origDocAdd.call(this, type, listener, options);
+  } as typeof document.addEventListener;
+
+  // Use prototype method to avoid capturing wrapped version
+  window.addEventListener = function (
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions,
+  ) {
+    registeredListeners.push({ target: window, type, listener, options });
+    return _origWinAdd.call(window, type, listener, options);
+  } as typeof window.addEventListener;
+}
+
+function removeAllTrackedListeners() {
+  for (const { target, type, listener, options } of registeredListeners) {
+    try {
+      if (target === document) {
+        _origDocRemove.call(document, type, listener, options);
+      } else {
+        _origWinRemove.call(window, type, listener, options);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  registeredListeners = [];
+}
+
+function restoreListenerMethods() {
+  document.addEventListener = _origDocAdd;
+  document.removeEventListener = _origDocRemove;
+  window.addEventListener = _origWinAdd as typeof window.addEventListener;
+  window.removeEventListener = _origWinRemove as typeof window.removeEventListener;
+}
+
+// ---------------------------------------------------------------------------
+// 1. detectAdapter() — adapter selection per hostname
 // ---------------------------------------------------------------------------
 
 describe('detectAdapter() — adapter selection per hostname', () => {
-  // We cannot directly call detectAdapter() because it is not exported.
-  // Instead we replicate its logic here and verify the mapping, then test
-  // the real function via integration tests below.
-
-  // The function is deterministic: it maps hostname -> adapter constructor.
-  // We verify the same mapping the source code uses.
-
   const cases: Array<{ hostname: string; expectedPlatform: string }> = [
     { hostname: 'mail.google.com', expectedPlatform: 'gmail' },
     { hostname: 'www.linkedin.com', expectedPlatform: 'linkedin' },
@@ -101,24 +163,29 @@ describe('detectAdapter() — adapter selection per hostname', () => {
     { hostname: 'app.slack.com', expectedPlatform: 'slack' },
     { hostname: 'myteam.slack.com', expectedPlatform: 'slack' },
     { hostname: 'discord.com', expectedPlatform: 'discord' },
+    { hostname: 'outlook.live.com', expectedPlatform: 'outlook' },
+    { hostname: 'outlook.office.com', expectedPlatform: 'outlook' },
+    { hostname: 'teams.microsoft.com', expectedPlatform: 'teams' },
+    { hostname: 'web.whatsapp.com', expectedPlatform: 'whatsapp' },
     { hostname: 'example.com', expectedPlatform: 'generic' },
   ];
 
   for (const { hostname, expectedPlatform } of cases) {
     it(`returns ${expectedPlatform} adapter for hostname "${hostname}"`, async () => {
-      // Dynamically set hostname before importing the adapter selection module
       Object.defineProperty(window, 'location', {
         value: { hostname },
         writable: true,
         configurable: true,
       });
 
-      // Import adapters and replicate the detection logic
       const { GmailAdapter } = await import('../../src/adapters/gmail');
       const { LinkedInAdapter } = await import('../../src/adapters/linkedin');
       const { TwitterAdapter } = await import('../../src/adapters/twitter');
       const { SlackAdapter } = await import('../../src/adapters/slack');
       const { DiscordAdapter } = await import('../../src/adapters/discord');
+      const { OutlookAdapter } = await import('../../src/adapters/outlook');
+      const { TeamsAdapter } = await import('../../src/adapters/teams');
+      const { WhatsAppAdapter } = await import('../../src/adapters/whatsapp');
       const { GenericFallbackAdapter } = await import('../../src/adapters/base');
 
       function detectAdapter(): PlatformAdapter {
@@ -128,6 +195,9 @@ describe('detectAdapter() — adapter selection per hostname', () => {
         if (host === 'x.com' || host === 'twitter.com') return new TwitterAdapter();
         if (host.endsWith('.slack.com') || host === 'app.slack.com') return new SlackAdapter();
         if (host === 'discord.com') return new DiscordAdapter();
+        if (host === 'outlook.live.com' || host === 'outlook.office.com') return new OutlookAdapter();
+        if (host === 'teams.microsoft.com') return new TeamsAdapter();
+        if (host === 'web.whatsapp.com') return new WhatsAppAdapter();
         return new GenericFallbackAdapter();
       }
 
@@ -138,72 +208,58 @@ describe('detectAdapter() — adapter selection per hostname', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2-6. Integration tests: init() orchestration
-//
-//    We mock all heavy dependencies (adapters, observer, trigger, popup, etc.)
-//    at the module level and then dynamically import src/content/index.ts.
+// 2-6. Integration tests
 // ---------------------------------------------------------------------------
 
 describe('content script init() orchestration', () => {
-  // Mocks for internal modules
   const mockScoreMessage = vi.fn<(text: string, patterns?: string[]) => number>();
-  const mockObserve = vi.fn();
-  const mockDisconnect = vi.fn();
-  let capturedOnHeuristic: ((text: string) => void) | null = null;
-  let capturedOnAiAnalyze: ((text: string) => Promise<void>) | null = null;
-
-  const mockTriggerShow = vi.fn();
-  const mockTriggerHide = vi.fn();
-  const mockTriggerElement = document.createElement('div');
-
-  const mockPopupShow = vi.fn();
-  const mockPopupHide = vi.fn();
-  const mockPopupShowStreaming = vi.fn();
   const mockPopupSetTheme = vi.fn();
-  const mockPopupPositionNear = vi.fn();
   const mockPopupElement = document.createElement('div');
-
   const mockFindInputField = vi.fn<() => HTMLElement | null>();
-  const mockPlaceTriggerIcon = vi.fn<(icon: HTMLElement) => (() => void) | null>();
   const mockWriteBack = vi.fn();
   const mockScrapeThreadContext = vi.fn().mockReturnValue([]);
-  const mockCheckHealth = vi.fn().mockReturnValue(true);
+
+  // Timer capture
+  let intervalCallbacks: Array<() => void>;
+  let timeoutCallbacks: Map<number, () => void>;
+  let nextTimeoutId: number;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    intervalCallbacks = [];
+    timeoutCallbacks = new Map();
+    nextTimeoutId = 1;
+
+    // Replace timers with manual capture
+    globalThis.setInterval = ((fn: () => void) => {
+      intervalCallbacks.push(fn);
+      return intervalCallbacks.length as unknown as ReturnType<typeof setInterval>;
+    }) as typeof setInterval;
+    globalThis.clearInterval = (() => {}) as typeof clearInterval;
+    globalThis.setTimeout = ((fn: () => void) => {
+      const id = nextTimeoutId++;
+      timeoutCallbacks.set(id, fn);
+      return id as unknown as ReturnType<typeof setTimeout>;
+    }) as typeof setTimeout;
+    globalThis.clearTimeout = ((id: number) => {
+      timeoutCallbacks.delete(id);
+    }) as typeof clearTimeout;
+
+    installListenerTracking();
     setupChromeMock();
     document.body.innerHTML = '';
 
-    // Reset all mocks
     sendMessageMock.mockReset();
     mockScoreMessage.mockReset();
-    mockObserve.mockReset();
-    mockDisconnect.mockReset();
-    mockTriggerShow.mockReset();
-    mockTriggerHide.mockReset();
-    mockPopupShow.mockReset();
-    mockPopupHide.mockReset();
-    mockPopupShowStreaming.mockReset();
     mockPopupSetTheme.mockReset();
-    mockPopupPositionNear.mockReset();
     mockFindInputField.mockReset();
-    mockPlaceTriggerIcon.mockReset();
     mockWriteBack.mockReset();
     mockScrapeThreadContext.mockReset().mockReturnValue([]);
-    capturedOnHeuristic = null;
-    capturedOnAiAnalyze = null;
 
-    // Default: no input field found (tests can override)
     mockFindInputField.mockReturnValue(null);
-    mockPlaceTriggerIcon.mockReturnValue(() => {});
-    // Default: score below threshold (tests override to trigger analysis)
     mockScoreMessage.mockReturnValue(0);
 
-    // Default sendMessage: return settings for get-settings
     sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
       if (msg.type === 'get-settings') return settingsResponse();
-      if (msg.type === 'check-suppressed') return suppressionResponse(false);
-      if (msg.type === 'get-profile') return profileResponse();
       if (msg.type === 'analyze') return analysisResultResponse(true);
       if (msg.type === 'increment-stat') return settingsResponse();
       if (msg.type === 'record-flag') return settingsResponse();
@@ -211,16 +267,14 @@ describe('content script init() orchestration', () => {
       return settingsResponse();
     });
 
-    // Mock all modules that index.ts imports.
-    // Adapters must be actual classes (constructable with `new`).
     function makeAdapterClass(name: string) {
       return class {
         platformName = name;
         findInputField = mockFindInputField;
-        placeTriggerIcon = mockPlaceTriggerIcon;
+        placeTriggerIcon = vi.fn().mockReturnValue(() => {});
         writeBack = mockWriteBack;
         scrapeThreadContext = mockScrapeThreadContext;
-        checkHealth = mockCheckHealth;
+        checkHealth = vi.fn().mockReturnValue(true);
       };
     }
 
@@ -230,49 +284,19 @@ describe('content script init() orchestration', () => {
       TwitterAdapter: makeAdapterClass('twitter'),
       SlackAdapter: makeAdapterClass('slack'),
       DiscordAdapter: makeAdapterClass('discord'),
+      OutlookAdapter: makeAdapterClass('outlook'),
+      TeamsAdapter: makeAdapterClass('teams'),
+      WhatsAppAdapter: makeAdapterClass('whatsapp'),
       GenericFallbackAdapter: makeAdapterClass('generic'),
-    }));
-
-    vi.doMock('../../src/content/observer', () => {
-      const self = {
-        observe: mockObserve,
-        disconnect: mockDisconnect,
-        currentElement: null as HTMLElement | null,
-        generation: 0,
-      };
-      return {
-        InputObserver: class {
-          observe = self.observe;
-          disconnect = self.disconnect;
-          currentElement = self.currentElement;
-          generation = self.generation;
-          constructor(opts: {
-            onHeuristic: (text: string) => void;
-            onAiAnalyze: (text: string) => void;
-          }) {
-            capturedOnHeuristic = opts.onHeuristic;
-            capturedOnAiAnalyze = opts.onAiAnalyze as (text: string) => Promise<void>;
-          }
-        },
-      };
-    });
-
-    vi.doMock('../../src/content/trigger', () => ({
-      TriggerIcon: class {
-        show = mockTriggerShow;
-        hide = mockTriggerHide;
-        element = mockTriggerElement;
-        constructor(_onClick: () => void) {}
-      },
     }));
 
     vi.doMock('../../src/content/popup-card', () => ({
       PopupCard: class {
-        show = mockPopupShow;
-        hide = mockPopupHide;
-        showStreaming = mockPopupShowStreaming;
+        show = vi.fn();
+        hide = vi.fn();
+        showStreaming = vi.fn();
         setTheme = mockPopupSetTheme;
-        positionNear = mockPopupPositionNear;
+        positionNear = vi.fn();
         element = mockPopupElement;
         constructor(_opts: unknown) {}
       },
@@ -293,183 +317,62 @@ describe('content script init() orchestration', () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
+    removeAllTrackedListeners();
+    restoreListenerMethods();
+
+    globalThis.setInterval = _realSetInterval;
+    globalThis.clearInterval = _realClearInterval;
+    globalThis.setTimeout = _realSetTimeout;
+    globalThis.clearTimeout = _realClearTimeout;
+
     vi.restoreAllMocks();
     vi.resetModules();
     document.body.innerHTML = '';
   });
 
   async function loadContentScript() {
-    // Set hostname so detectAdapter picks generic (doesn't matter for most tests)
     Object.defineProperty(window, 'location', {
       value: { hostname: 'example.com' },
       writable: true,
       configurable: true,
     });
 
-    // document.readyState is 'complete' in jsdom, so init() runs immediately
     await import('../../src/content/index');
-    // Flush microtasks (settings promise)
-    await vi.runAllTimersAsync();
+    await flushAsync();
   }
 
-  // --- Test 2: Generation tracking discards stale responses ---
+  async function fireDebounceTimers(): Promise<void> {
+    const pending = new Map(timeoutCallbacks);
+    timeoutCallbacks.clear();
+    for (const [, fn] of pending) {
+      fn();
+    }
+    await flushAsync();
+  }
 
-  describe('generation tracking', () => {
-    it('discards stale analysis responses when a newer analysis has started', async () => {
-      await loadContentScript();
-      expect(capturedOnAiAnalyze).not.toBeNull();
+  function firePollingInterval(): void {
+    for (const cb of intervalCallbacks) {
+      cb();
+    }
+  }
 
-      // Mock scoreMessage to return above threshold
-      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.1);
+  /**
+   * Create a contenteditable div, trigger focusin, set text, fire input.
+   * The content script only detects contenteditable / role=textbox via focusin.
+   */
+  function createEditableAndType(text: string): HTMLDivElement {
+    const editable = document.createElement('div');
+    editable.setAttribute('contenteditable', 'true');
+    document.body.appendChild(editable);
+    editable.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    editable.textContent = text;
+    editable.dispatchEvent(new Event('input', { bubbles: true }));
+    return editable;
+  }
 
-      // First analysis starts — make check-suppressed slow
-      let resolveFirst!: (value: MessageFromBackground) => void;
-      sendMessageMock.mockImplementationOnce(
-        () => new Promise<MessageFromBackground>((r) => (resolveFirst = r)),
-      );
+  // --- Initialization ---
 
-      const firstPromise = capturedOnAiAnalyze!('This is rude and terrible!!');
-
-      // Second analysis starts immediately (simulates user typing again)
-      sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
-        if (msg.type === 'get-settings') return settingsResponse();
-        if (msg.type === 'check-suppressed') return suppressionResponse(false);
-        if (msg.type === 'get-profile') return profileResponse();
-        if (msg.type === 'analyze') return analysisResultResponse(true);
-        if (msg.type === 'record-flag') return settingsResponse();
-        return settingsResponse();
-      });
-
-      const secondPromise = capturedOnAiAnalyze!('Another rude and terrible message!!');
-
-      // Now resolve the first (stale) check-suppressed
-      resolveFirst(suppressionResponse(false));
-      await firstPromise;
-      await secondPromise;
-      await vi.runAllTimersAsync();
-
-      // The trigger show should have been called for the second (current) analysis,
-      // not the first (stale) one. The abort/generation check prevents double-show.
-      // We verify the trigger was shown (from the second call) but the key point is
-      // the first stale response was discarded via the generation check.
-      expect(mockTriggerShow).toHaveBeenCalled();
-    });
-  });
-
-  // --- Test 3: Heuristic score below threshold hides trigger ---
-
-  describe('heuristic scoring', () => {
-    it('hides the trigger when heuristic score is below threshold (stage 1)', async () => {
-      await loadContentScript();
-      expect(capturedOnHeuristic).not.toBeNull();
-
-      // Mock scoreMessage to return below threshold
-      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD - 0.1);
-
-      capturedOnHeuristic!('Hello, how are you doing today?');
-
-      expect(mockTriggerHide).toHaveBeenCalled();
-    });
-
-    it('shows the trigger badge immediately when heuristic flags (stage 1)', async () => {
-      await loadContentScript();
-      expect(capturedOnHeuristic).not.toBeNull();
-
-      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
-
-      capturedOnHeuristic!('Per my last email, whatever you say is fine.');
-
-      // Stage 1 shows trigger with preliminary 'low' risk level
-      expect(mockTriggerShow).toHaveBeenCalledWith('low');
-    });
-
-    // --- Test 4: AI analysis refines trigger after stage 2 ---
-
-    it('shows the trigger with AI risk level when analysis flags the message (stage 2)', async () => {
-      await loadContentScript();
-      expect(capturedOnAiAnalyze).not.toBeNull();
-
-      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
-
-      // sendMessage returns flagged analysis result (already default)
-      sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
-        if (msg.type === 'get-settings') return settingsResponse();
-        if (msg.type === 'check-suppressed') return suppressionResponse(false);
-        if (msg.type === 'get-profile') return profileResponse();
-        if (msg.type === 'analyze') return analysisResultResponse(true);
-        if (msg.type === 'record-flag') return settingsResponse();
-        return settingsResponse();
-      });
-
-      await capturedOnAiAnalyze!('Per my last email, whatever you say is fine.');
-      await vi.runAllTimersAsync();
-
-      expect(mockTriggerShow).toHaveBeenCalledWith('medium');
-      expect(mockPopupShowStreaming).toHaveBeenCalled();
-      expect(mockPopupHide).toHaveBeenCalled(); // popup hides after result arrives
-    });
-
-    it('hides trigger when AI analysis does not flag the message (stage 2)', async () => {
-      await loadContentScript();
-      expect(capturedOnAiAnalyze).not.toBeNull();
-
-      vi.spyOn(await import('../../src/content/heuristic-scorer'), 'scoreMessage').mockReturnValue(
-        HEURISTIC_THRESHOLD + 0.2,
-      );
-
-      sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
-        if (msg.type === 'get-settings') return settingsResponse();
-        if (msg.type === 'check-suppressed') return suppressionResponse(false);
-        if (msg.type === 'get-profile') return profileResponse();
-        if (msg.type === 'analyze') return analysisResultResponse(false);
-        return settingsResponse();
-      });
-
-      await capturedOnAiAnalyze!('Some text that passes heuristic but not AI');
-      await vi.runAllTimersAsync();
-
-      expect(mockTriggerHide).toHaveBeenCalled();
-    });
-  });
-
-  // --- Test 5: MutationObserver setup ---
-
-  describe('MutationObserver setup', () => {
-    it('observes document.body for child list changes', async () => {
-      const observeSpy = vi.spyOn(MutationObserver.prototype, 'observe');
-      await loadContentScript();
-
-      // The init function calls domObserver.observe(document.body, ...)
-      expect(observeSpy).toHaveBeenCalledWith(document.body, {
-        childList: true,
-        subtree: true,
-      });
-    });
-
-    it('calls adapter.findInputField when DOM changes and observes new input', async () => {
-      const textarea = document.createElement('textarea');
-      mockFindInputField.mockReturnValue(textarea);
-
-      await loadContentScript();
-
-      // Simulate a DOM mutation
-      const newChild = document.createElement('div');
-      document.body.appendChild(newChild);
-
-      // The MutationObserver callback uses a 500ms throttle
-      vi.advanceTimersByTime(600);
-
-      // findInputField should have been called (once initially + once via mutation)
-      expect(mockFindInputField).toHaveBeenCalled();
-      // observer.observe should have been called with the input element
-      expect(mockObserve).toHaveBeenCalled();
-    });
-  });
-
-  // --- Test 6: Message sending to service worker ---
-
-  describe('message sending to service worker', () => {
+  describe('initialization', () => {
     it('sends get-settings message on init', async () => {
       await loadContentScript();
 
@@ -479,16 +382,70 @@ describe('content script init() orchestration', () => {
       expect(settingsCalls.length).toBeGreaterThanOrEqual(1);
     });
 
+    it('applies theme from settings response', async () => {
+      sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
+        if (msg.type === 'get-settings') return settingsResponse({ theme: 'dark' });
+        return settingsResponse();
+      });
+
+      await loadContentScript();
+
+      expect(mockPopupSetTheme).toHaveBeenCalledWith('dark');
+    });
+  });
+
+  // --- Warning banner ---
+
+  describe('warning banner', () => {
+    it('shows warning banner when a harsh message is typed', async () => {
+      await loadContentScript();
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
+
+      createEditableAndType('This is stupid and ridiculous, you are terrible!!');
+      await fireDebounceTimers();
+
+      const banner = document.getElementById('reword-warning-banner');
+      expect(banner).not.toBeNull();
+      expect(banner!.style.display).toBe('block');
+    });
+
+    it('does not show warning banner when heuristic score is below threshold', async () => {
+      await loadContentScript();
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD - 0.1);
+
+      createEditableAndType('Hello, how are you doing today? This is a nice message.');
+
+      // Score below threshold => no debounce timer set
+      expect(timeoutCallbacks.size).toBe(0);
+
+      const banner = document.getElementById('reword-warning-banner');
+      expect(banner).not.toBeNull();
+      expect(banner!.style.display).toBe('none');
+    });
+
+    it('hides warning banner when message is too short', async () => {
+      await loadContentScript();
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
+
+      createEditableAndType('hi');
+
+      expect(timeoutCallbacks.size).toBe(0);
+
+      const banner = document.getElementById('reword-warning-banner');
+      expect(banner).not.toBeNull();
+      expect(banner!.style.display).toBe('none');
+    });
+  });
+
+  // --- AI analysis ---
+
+  describe('AI analysis', () => {
     it('sends analyze message with correct payload when heuristic triggers', async () => {
       await loadContentScript();
-      expect(capturedOnAiAnalyze).not.toBeNull();
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
 
-      vi.spyOn(await import('../../src/content/heuristic-scorer'), 'scoreMessage').mockReturnValue(
-        HEURISTIC_THRESHOLD + 0.2,
-      );
-
-      await capturedOnAiAnalyze!('This is stupid and ridiculous!!');
-      await vi.runAllTimersAsync();
+      createEditableAndType('This is stupid and ridiculous!!');
+      await fireDebounceTimers();
 
       const analyzeCalls = sendMessageMock.mock.calls.filter(
         ([msg]) => (msg as MessageToBackground).type === 'analyze',
@@ -496,72 +453,61 @@ describe('content script init() orchestration', () => {
       expect(analyzeCalls.length).toBe(1);
       const analyzeMsg = analyzeCalls[0][0] as Extract<MessageToBackground, { type: 'analyze' }>;
       expect(analyzeMsg.text).toBe('This is stupid and ridiculous!!');
-      expect(analyzeMsg.relationshipType).toBe('workplace'); // default when no profile
-      expect(analyzeMsg.sensitivity).toBe('medium'); // default
+      expect(analyzeMsg.relationshipType).toBe('workplace');
+      expect(analyzeMsg.sensitivity).toBe('medium');
     });
 
-    it('sends check-suppressed message before analyzing', async () => {
-      await loadContentScript();
-      expect(capturedOnAiAnalyze).not.toBeNull();
-
-      vi.spyOn(await import('../../src/content/heuristic-scorer'), 'scoreMessage').mockReturnValue(
-        HEURISTIC_THRESHOLD + 0.2,
-      );
-
-      await capturedOnAiAnalyze!('Whatever, fine. Thanks for nothing.');
-      await vi.runAllTimersAsync();
-
-      const suppressCalls = sendMessageMock.mock.calls.filter(
-        ([msg]) => (msg as MessageToBackground).type === 'check-suppressed',
-      );
-      expect(suppressCalls.length).toBe(1);
-    });
-
-    it('skips analysis when message is suppressed', async () => {
-      await loadContentScript();
-      expect(capturedOnAiAnalyze).not.toBeNull();
-
-      vi.spyOn(await import('../../src/content/heuristic-scorer'), 'scoreMessage').mockReturnValue(
-        HEURISTIC_THRESHOLD + 0.2,
-      );
-
+    it('shows analysis results in banner when AI flags the message', async () => {
       sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
         if (msg.type === 'get-settings') return settingsResponse();
-        if (msg.type === 'check-suppressed') return suppressionResponse(true);
-        if (msg.type === 'get-profile') return profileResponse();
-        if (msg.type === 'analyze') return analysisResultResponse(true);
-        return settingsResponse();
-      });
-
-      await capturedOnAiAnalyze!('Whatever, this is fine.');
-      await vi.runAllTimersAsync();
-
-      expect(mockTriggerHide).toHaveBeenCalled();
-      const analyzeCalls = sendMessageMock.mock.calls.filter(
-        ([msg]) => (msg as MessageToBackground).type === 'analyze',
-      );
-      expect(analyzeCalls).toHaveLength(0);
-    });
-
-    it('sends record-flag message after a flagged analysis', async () => {
-      await loadContentScript();
-      expect(capturedOnAiAnalyze).not.toBeNull();
-
-      vi.spyOn(await import('../../src/content/heuristic-scorer'), 'scoreMessage').mockReturnValue(
-        HEURISTIC_THRESHOLD + 0.2,
-      );
-
-      sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
-        if (msg.type === 'get-settings') return settingsResponse();
-        if (msg.type === 'check-suppressed') return suppressionResponse(false);
-        if (msg.type === 'get-profile') return profileResponse();
         if (msg.type === 'analyze') return analysisResultResponse(true);
         if (msg.type === 'record-flag') return settingsResponse();
         return settingsResponse();
       });
 
-      await capturedOnAiAnalyze!('This is stupid and pathetic!!');
-      await vi.runAllTimersAsync();
+      await loadContentScript();
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
+
+      createEditableAndType('Per my last email, whatever you say is fine.');
+      await fireDebounceTimers();
+
+      const banner = document.getElementById('reword-warning-banner');
+      expect(banner).not.toBeNull();
+      expect(banner!.style.display).toBe('block');
+      expect(banner!.textContent).toContain('test explanation');
+    });
+
+    it('hides banner when AI analysis does not flag the message', async () => {
+      sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
+        if (msg.type === 'get-settings') return settingsResponse();
+        if (msg.type === 'analyze') return analysisResultResponse(false);
+        return settingsResponse();
+      });
+
+      await loadContentScript();
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
+
+      createEditableAndType('Some text that passes heuristic but not AI');
+      await fireDebounceTimers();
+
+      const banner = document.getElementById('reword-warning-banner');
+      expect(banner).not.toBeNull();
+      expect(banner!.style.display).toBe('none');
+    });
+
+    it('sends record-flag message after a flagged analysis', async () => {
+      sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
+        if (msg.type === 'get-settings') return settingsResponse();
+        if (msg.type === 'analyze') return analysisResultResponse(true);
+        if (msg.type === 'record-flag') return settingsResponse();
+        return settingsResponse();
+      });
+
+      await loadContentScript();
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
+
+      createEditableAndType('This is stupid and pathetic!!');
+      await fireDebounceTimers();
 
       const flagCalls = sendMessageMock.mock.calls.filter(
         ([msg]) => (msg as MessageToBackground).type === 'record-flag',
@@ -573,24 +519,101 @@ describe('content script init() orchestration', () => {
     });
   });
 
-  // --- Settings / theme ---
+  // --- Popup / banner element appended to body ---
 
-  describe('settings integration', () => {
-    it('applies theme from settings response', async () => {
-      sendMessageMock.mockImplementation(async (msg: MessageToBackground) => {
-        if (msg.type === 'get-settings') return settingsResponse({ theme: 'dark' });
-        return settingsResponse();
-      });
-
+  describe('popup element', () => {
+    it('appends the warning banner element to document.body', async () => {
       await loadContentScript();
 
-      expect(mockPopupSetTheme).toHaveBeenCalledWith('dark');
+      const banner = document.getElementById('reword-warning-banner');
+      expect(banner).not.toBeNull();
+      expect(document.body.contains(banner)).toBe(true);
+    });
+  });
+
+  // --- Input detection ---
+
+  describe('input detection', () => {
+    it('attaches input listener when a contenteditable element receives focus', async () => {
+      await loadContentScript();
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
+
+      createEditableAndType('This is a really terrible and rude message to send!');
+      await fireDebounceTimers();
+
+      const analyzeCalls = sendMessageMock.mock.calls.filter(
+        ([msg]) => (msg as MessageToBackground).type === 'analyze',
+      );
+      expect(analyzeCalls.length).toBe(1);
     });
 
-    it('appends popup element to document.body', async () => {
+    it('polls for input fields via setInterval', async () => {
+      const editable = document.createElement('div');
+      editable.setAttribute('contenteditable', 'true');
+      document.body.appendChild(editable);
+      mockFindInputField.mockReturnValue(editable);
+
       await loadContentScript();
 
-      expect(document.body.contains(mockPopupElement)).toBe(true);
+      // Fire the setInterval callback to discover the element
+      firePollingInterval();
+
+      mockScoreMessage.mockReturnValue(HEURISTIC_THRESHOLD + 0.2);
+      editable.textContent = 'This is absolutely terrible and pathetic work!!';
+      editable.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await fireDebounceTimers();
+
+      const analyzeCalls = sendMessageMock.mock.calls.filter(
+        ([msg]) => (msg as MessageToBackground).type === 'analyze',
+      );
+      expect(analyzeCalls.length).toBe(1);
+    });
+  });
+
+  // --- shadow-pierce.js integration ---
+
+  describe('shadow-pierce.js integration', () => {
+    it('triggers analysis when reword-send-intercept message is received', async () => {
+      await loadContentScript();
+
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            type: 'reword-send-intercept',
+            text: 'This is a really rude and terrible message!',
+          },
+        }),
+      );
+
+      await flushAsync();
+
+      const analyzeCalls = sendMessageMock.mock.calls.filter(
+        ([msg]) => (msg as MessageToBackground).type === 'analyze',
+      );
+      expect(analyzeCalls.length).toBe(1);
+      const analyzeMsg = analyzeCalls[0][0] as Extract<MessageToBackground, { type: 'analyze' }>;
+      expect(analyzeMsg.text).toBe('This is a really rude and terrible message!');
+    });
+
+    it('ignores reword-send-intercept with short text', async () => {
+      await loadContentScript();
+
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            type: 'reword-send-intercept',
+            text: 'hi',
+          },
+        }),
+      );
+
+      await flushAsync();
+
+      const analyzeCalls = sendMessageMock.mock.calls.filter(
+        ([msg]) => (msg as MessageToBackground).type === 'analyze',
+      );
+      expect(analyzeCalls).toHaveLength(0);
     });
   });
 });

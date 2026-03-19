@@ -56,23 +56,52 @@ const EXCLAMATION_INFLATION_RE = /!{3,}/;
 const EXCLAMATION_INFLATION_WEIGHT = 0.25;
 
 /**
+ * Profanity — these are unambiguously hostile and should trigger on their own.
+ * Scored as a separate category so a single profane word crosses threshold.
+ */
+const PROFANITY_PATTERNS: RegExp[] = [
+  /\bfuck\b/i, /\bfucking\b/i, /\bfucked\b/i, /\bfuck\s?(you|off|this|that)\b/i,
+  /\bshit\b/i, /\bshitty\b/i, /\bbullshit\b/i,
+  /\bass\b/i, /\basshole\b/i,
+  /\bbitch\b/i, /\bbitching\b/i,
+  /\bdamn\s?(you|it)\b/i,
+  /\bstfu\b/i, /\bwtf\b/i, /\bgtfo\b/i,
+  /\bscrew\s?(you|off|this|that)\b/i,
+  /\bpiss\s?(off|me)\b/i,
+  /\bcrap\b/i,
+  /\bdumbass\b/i, /\bdumb\s+ass\b/i,
+  /\bjackass\b/i,
+  /\bmoron\b/i, /\bimbecile\b/i,
+];
+const PROFANITY_WEIGHT = 0.45;
+
+/**
+ * Directed insults — "you are [negative]" constructions are worse than standalone keywords.
+ */
+const DIRECTED_INSULT_RE = /\byou\s+(are|r)\s+(\w+\s+)?(stupid|dumb|useless|pathetic|terrible|awful|incompetent|worthless|an?\s+idiot|an?\s+moron)\b/i;
+const DIRECTED_INSULT_WEIGHT = 0.45;
+
+/**
  * Each negative keyword has a weight. Within the "keywords" category,
  * only the highest-weight match counts.
  */
-const NEGATIVE_KEYWORDS: { keyword: string; weight: number }[] = [
-  { keyword: 'stupid', weight: 0.2 },
-  { keyword: 'idiot', weight: 0.2 },
-  { keyword: 'hate', weight: 0.2 },
-  { keyword: 'annoying', weight: 0.15 },
-  { keyword: 'useless', weight: 0.2 },
-  { keyword: 'pathetic', weight: 0.2 },
-  { keyword: 'ridiculous', weight: 0.15 },
-  { keyword: 'disgusting', weight: 0.2 },
-  { keyword: 'terrible', weight: 0.15 },
-  { keyword: 'awful', weight: 0.15 },
-  { keyword: 'never mind', weight: 0.15 },
-  { keyword: 'forget it', weight: 0.15 },
-  { keyword: "don't bother", weight: 0.15 },
+const NEGATIVE_KEYWORDS: { re: RegExp; weight: number }[] = [
+  { re: /\bstupid\b/i, weight: 0.4 },
+  { re: /\bidiot\b/i, weight: 0.4 },
+  { re: /\bhate\b/i, weight: 0.2 },
+  { re: /\bannoying\b/i, weight: 0.15 },
+  { re: /\buseless\b/i, weight: 0.4 },
+  { re: /\bpathetic\b/i, weight: 0.4 },
+  { re: /\bridiculous\b/i, weight: 0.15 },
+  { re: /\bdisgusting\b/i, weight: 0.3 },
+  { re: /\bterrible\b/i, weight: 0.2 },
+  { re: /\bawful\b/i, weight: 0.2 },
+  { re: /\bincompetent\b/i, weight: 0.4 },
+  { re: /\bworthless\b/i, weight: 0.4 },
+  { re: /\bdumb\b/i, weight: 0.4 },
+  { re: /\bnever mind\b/i, weight: 0.15 },
+  { re: /\bforget it\b/i, weight: 0.15 },
+  { re: /\bdon't bother\b/i, weight: 0.15 },
 ];
 
 /**
@@ -109,7 +138,8 @@ export function scoreMessage(
   let sarcasmScore = 0;
   let hedgingScore = 0;
   let exclamationInflationScore = 0;
-
+  let profanityScore = 0;
+  let directedInsultScore = 0;
   // Check passive-aggressive patterns — highest-weight match + small bonus for extras
   const EXTRA_MATCH_BONUS = 0.15;
   const PATTERN_CAP = 0.7;
@@ -128,8 +158,7 @@ export function scoreMessage(
   // Uses word-boundary regex to avoid substring false positives (e.g. "whatever" matching "hate")
   const KEYWORD_CAP = 0.4;
   let keywordMatches = 0;
-  for (const { keyword, weight } of NEGATIVE_KEYWORDS) {
-    const keywordRe = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+  for (const { re: keywordRe, weight } of NEGATIVE_KEYWORDS) {
     if (keywordRe.test(text)) {
       keywordScore = Math.max(keywordScore, weight);
       keywordMatches++;
@@ -182,6 +211,19 @@ export function scoreMessage(
     exclamationInflationScore = EXCLAMATION_INFLATION_WEIGHT;
   }
 
+  // Profanity — single match is enough to flag
+  for (const re of PROFANITY_PATTERNS) {
+    if (re.test(text)) {
+      profanityScore = PROFANITY_WEIGHT;
+      break;
+    }
+  }
+
+  // Directed insults — "you are [negative]"
+  if (DIRECTED_INSULT_RE.test(text)) {
+    directedInsultScore = DIRECTED_INSULT_WEIGHT;
+  }
+
   // User-defined custom patterns (#9) — take highest-weight match only
   if (customPatterns.length > 0) {
     for (const patStr of customPatterns) {
@@ -209,6 +251,8 @@ export function scoreMessage(
     exclamationInflationScore - (categoryBoosts['exclamation-inflation'] ?? 0),
   );
   customScore = Math.max(0, customScore - (categoryBoosts['custom'] ?? 0));
+  profanityScore = Math.max(0, profanityScore - (categoryBoosts['profanity'] ?? 0));
+  directedInsultScore = Math.max(0, directedInsultScore - (categoryBoosts['directed-insult'] ?? 0));
 
   return Math.min(
     1,
@@ -221,7 +265,9 @@ export function scoreMessage(
         customScore +
         sarcasmScore +
         hedgingScore +
-        exclamationInflationScore,
+        exclamationInflationScore +
+        profanityScore +
+        directedInsultScore,
     ),
   );
 }

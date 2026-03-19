@@ -127,6 +127,9 @@ export interface PlatformAdapter {
 
   /** Find all visible incoming message elements (for two-way analysis). */
   getIncomingMessageElements?(): HTMLElement[];
+
+  /** Find the send button for intercept-on-send mode. */
+  findSendButton?(): HTMLElement | null;
 }
 
 // --- Message passing between content script and service worker ---

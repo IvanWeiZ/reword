@@ -36,6 +36,9 @@ test('sensitivity selector changes value', async () => {
 });
 
 test('add and remove a relationship profile', async () => {
+  // Open advanced settings (collapsed by default)
+  await page.locator('details.advanced-settings summary').click();
+
   await page.fill('#new-profile-domain', 'example.com');
   await page.selectOption('#new-profile-type', 'romantic');
   await page.fill('#new-profile-label', 'Partner');
@@ -50,6 +53,9 @@ test('add and remove a relationship profile', async () => {
 });
 
 test('add and remove a domain', async () => {
+  // Open advanced settings
+  await page.locator('details.advanced-settings summary').click();
+
   await page.fill('#new-domain', 'test.example.com');
   await page.click('#add-domain');
 
@@ -61,6 +67,9 @@ test('add and remove a domain', async () => {
 });
 
 test('stats section is rendered', async () => {
+  // Open advanced settings to reveal stats
+  await page.locator('details.advanced-settings summary').click();
+
   const stats = page.locator('#stats');
   await expect(stats).toBeVisible();
   await expect(stats).toContainText('Messages analyzed');

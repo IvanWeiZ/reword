@@ -3,31 +3,14 @@ import type {
   AnalysisResult,
   MessageToBackground,
   MessageFromBackground,
-  Theme,
 } from '../shared/types';
-import {
-  DEBOUNCE_MS,
-  AI_DEBOUNCE_MS,
-  MIN_MESSAGE_LENGTH,
-  HEURISTIC_THRESHOLD,
-} from '../shared/constants';
+import { MIN_MESSAGE_LENGTH, HEURISTIC_THRESHOLD, AI_DEBOUNCE_MS } from '../shared/constants';
 import { scoreMessage } from './heuristic-scorer';
-import { InputObserver } from './observer';
-import { TriggerIcon } from './trigger';
 import { PopupCard } from './popup-card';
-import { InlineSuggestion } from './inline-suggestion';
-import { normalizeSnippet, deriveRecipientStyle } from './helpers';
-import { startIncomingAnalysis } from './incoming-analyzer';
-import { shouldShowSummary, showWeeklySummary } from './weekly-summary';
+import { normalizeSnippet } from './helpers';
 import {
-  GmailAdapter,
-  LinkedInAdapter,
-  TwitterAdapter,
-  SlackAdapter,
-  DiscordAdapter,
-  OutlookAdapter,
-  TeamsAdapter,
-  WhatsAppAdapter,
+  GmailAdapter, LinkedInAdapter, TwitterAdapter, SlackAdapter,
+  DiscordAdapter, OutlookAdapter, TeamsAdapter, WhatsAppAdapter,
   GenericFallbackAdapter,
 } from '../adapters';
 
@@ -48,25 +31,107 @@ async function sendMessage(msg: MessageToBackground): Promise<MessageFromBackgro
   return chrome.runtime.sendMessage(msg);
 }
 
+/** Create a big warning banner that's impossible to miss */
+function createWarningBanner(): {
+  element: HTMLElement;
+  show: (text: string) => void;
+  showAnalysis: (result: AnalysisResult, originalText: string) => void;
+  hide: () => void;
+} {
+  const banner = document.createElement('div');
+  banner.id = 'reword-warning-banner';
+  banner.style.cssText = `
+    position: fixed; bottom: 60px; left: 0; right: 0; z-index: 999999;
+    background: #1e40af; color: white; padding: 16px 24px;
+    font-family: system-ui, -apple-system, sans-serif; font-size: 15px;
+    display: none; box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease;
+  `;
+
+  const content = document.createElement('div');
+  content.style.cssText = 'max-width: 800px; margin: 0 auto;';
+  banner.appendChild(content);
+  document.body.appendChild(banner);
+
+  return {
+    element: banner,
+    show(_text: string) {
+      content.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:24px;">⚠️</span>
+          <div style="flex:1;">
+            <strong>Reword:</strong> This message may come across as harsh. Checking tone...
+          </div>
+          <button id="reword-dismiss" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:14px;">Dismiss</button>
+        </div>`;
+      banner.style.display = 'block';
+      document.getElementById('reword-dismiss')?.addEventListener('click', () => {
+        banner.style.display = 'none';
+      });
+    },
+    showAnalysis(result: AnalysisResult, _originalText: string) {
+      const issueList = result.issues.map(i => `<li>${i}</li>`).join('');
+      const rewriteButtons = result.rewrites.map((r, i) => `
+        <button class="reword-use-rewrite" data-index="${i}"
+          style="background:white;color:#333;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;text-align:left;margin:4px 0;width:100%;">
+          <strong>${r.tone}:</strong> ${r.text.slice(0, 120)}${r.text.length > 120 ? '...' : ''}
+        </button>`).join('');
+
+      content.innerHTML = `
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <span style="font-size:24px;">⚠️</span>
+          <div style="flex:1;">
+            <div style="margin-bottom:8px;">
+              <strong>Tone issue detected:</strong> ${result.explanation || issueList}
+            </div>
+            ${result.rewrites.length > 0 ? `
+              <div style="margin-bottom:8px;font-size:13px;opacity:0.9;">Click a rewrite to replace your message:</div>
+              <div>${rewriteButtons}</div>
+            ` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button id="reword-send-anyway" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;">Send anyway</button>
+            <button id="reword-dismiss2" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;">Edit message</button>
+          </div>
+        </div>`;
+      banner.style.display = 'block';
+
+      document.getElementById('reword-send-anyway')?.addEventListener('click', () => {
+        banner.style.display = 'none';
+      });
+      document.getElementById('reword-dismiss2')?.addEventListener('click', () => {
+        banner.style.display = 'none';
+      });
+    },
+    hide() {
+      banner.style.display = 'none';
+    },
+  };
+}
+
 function init(): void {
+  console.log('[Reword] init on', window.location.hostname);
   const adapter = detectAdapter();
+
   let currentResult: AnalysisResult | null = null;
   let currentText = '';
-  let previousText = '';
-  let triggerCleanup: (() => void) | null = null;
-  let generation = 0;
-  let abortController: AbortController | null = null;
-  let customPatterns: string[] = [];
-  let categoryBoosts: Record<string, number> = {};
-  let theme: Theme = 'auto';
+  let analyzing = false;
+  let cachedInput: HTMLElement | null = null;
+
+  const banner = createWarningBanner();
 
   const popup = new PopupCard({
     onRewrite: (text) => {
-      previousText = currentText;
       adapter.writeBack(text);
+      banner.hide();
+      // Tell shadow-pierce (MAIN world) to unblock — text has been replaced with clean rewrite
+      window.postMessage({ type: 'reword-unblock' }, '*');
+      // Also fire synthetic input event so shadow-pierce re-scores the new text
+      if (cachedInput) cachedInput.dispatchEvent(new Event('input', { bubbles: true }));
       sendMessage({ type: 'increment-stat', stat: 'rewritesAccepted' });
     },
     onDismiss: () => {
+      banner.hide();
       if (currentText) {
         sendMessage({
           type: 'record-dismiss',
@@ -75,170 +140,56 @@ function init(): void {
         });
       }
     },
-    onUndo: () => {
-      if (previousText) {
-        adapter.writeBack(previousText);
-      }
-    },
-    onSuppress: (text) => {
-      sendMessage({ type: 'suppress-phrase', text });
-    },
+    onSuppress: (text) => sendMessage({ type: 'suppress-phrase', text }),
   });
 
-  const inlineSuggestion = new InlineSuggestion();
-
-  const trigger = new TriggerIcon(() => {
-    if (currentResult) {
-      // Dismiss ghost text when opening full popup
-      inlineSuggestion.dismiss();
-      popup.positionNear(trigger.element);
-      popup.show(currentResult, currentText);
-    }
-  });
-
-  document.body.appendChild(popup.element);
-
-  // Load settings to get custom patterns, theme, and personas
+  // Load theme
   sendMessage({ type: 'get-settings' }).then((resp) => {
-    if (resp.type === 'settings') {
-      customPatterns = resp.data.settings.customPatterns;
-      theme = resp.data.settings.theme;
-      popup.setTheme(theme);
-
-      // Start incoming analysis if enabled (#14)
-      if (resp.data.settings.analyzeIncoming && adapter.getIncomingMessageElements) {
-        startIncomingAnalysis(adapter, resp.data.settings.theme);
-      }
-
-      // Check if weekly summary should be shown
-      const { weeklyStats, previousWeeklyStats, lastWeeklySummaryShown } = resp.data;
-      if (shouldShowSummary(lastWeeklySummaryShown, weeklyStats)) {
-        showWeeklySummary({
-          currentWeek: weeklyStats,
-          previousWeek: previousWeeklyStats,
-        });
-        // Mark as shown by updating storage via background
-        resp.data.lastWeeklySummaryShown = new Date().toISOString();
-        chrome.storage.local.set({ reword: resp.data });
-      }
-    }
+    if (resp.type === 'settings') popup.setTheme(resp.data.settings.theme);
   });
 
-  // Load category boosts for adaptive false positive reduction
-  sendMessage({ type: 'get-category-boosts' }).then((resp) => {
-    if (resp.type === 'category-boosts') {
-      categoryBoosts = resp.boosts;
-    }
-  });
+  function getTextFrom(el: HTMLElement): string {
+    if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) return el.value.trim();
+    return el.textContent?.trim() ?? '';
+  }
 
-  const observer = new InputObserver({
-    debounceMs: DEBOUNCE_MS,
-    aiDebounceMs: AI_DEBOUNCE_MS,
-    minLength: MIN_MESSAGE_LENGTH,
+  // Analyze message and show banner
+  async function analyzeMessage(text: string): Promise<void> {
+    if (analyzing) return;
+    analyzing = true;
+    currentText = text;
 
-    // Stage 1 (800ms): fast local heuristic — show badge immediately if flagged
-    onHeuristic: (text) => {
-      const score = scoreMessage(text, customPatterns, categoryBoosts);
-      if (score < HEURISTIC_THRESHOLD) {
-        trigger.hide();
-        inlineSuggestion.dismiss();
-        currentResult = null;
-        return;
-      }
+    // Show warning immediately
+    banner.show(text);
 
-      // Heuristic flagged — show trigger badge immediately for fast feedback
-      // Use 'low' as preliminary risk level; AI stage 2 will refine it
-      currentText = text;
-      trigger.show('low');
-      if (triggerCleanup) triggerCleanup();
-      triggerCleanup = adapter.placeTriggerIcon(trigger.element);
-    },
-
-    // Stage 2 (2000ms): full AI analysis with rewrites
-    onAiAnalyze: async (text) => {
-      const thisGeneration = ++generation;
-
-      // Cancel any in-flight request
-      if (abortController) abortController.abort();
-      abortController = new AbortController();
-      const signal = abortController.signal;
-
-      // Re-check heuristic (text may have changed since stage 1)
-      const score = scoreMessage(text, customPatterns, categoryBoosts);
-      if (score < HEURISTIC_THRESHOLD) {
-        trigger.hide();
-        inlineSuggestion.dismiss();
-        currentResult = null;
-        return;
-      }
-
-      // Check if this pattern is suppressed (learning mode #6)
-      const suppressResp = await sendMessage({
-        type: 'check-suppressed',
-        textSnippet: normalizeSnippet(text),
-      });
-      if (signal.aborted || thisGeneration !== generation) return;
-      if (suppressResp.type === 'suppression-result' && suppressResp.suppressed) {
-        trigger.hide();
-        currentResult = null;
-        return;
-      }
-
-      currentText = text;
-
-      // Get relationship context
-      const host = window.location.hostname;
-      const profileResp = await sendMessage({ type: 'get-profile', domain: host });
-      if (signal.aborted || thisGeneration !== generation) return;
-      const profile = profileResp.type === 'profile' ? profileResp.profile : null;
-
-      const settingsResp = await sendMessage({ type: 'get-settings' });
-      if (signal.aborted || thisGeneration !== generation) return;
-      const settings = settingsResp.type === 'settings' ? settingsResp.data.settings : null;
-
-      const threadContext = adapter.scrapeThreadContext();
-      const recipientStyle = deriveRecipientStyle(adapter);
-
-      // Show streaming indicator (#7)
-      popup.positionNear(trigger.element);
-      popup.showStreaming();
-
-      // Send to background for analysis (with personas #13 and recipient style #8)
+    try {
       const response = await sendMessage({
         type: 'analyze',
         text,
-        context: threadContext,
-        relationshipType: profile?.type ?? 'workplace',
-        sensitivity: profile?.sensitivity ?? settings?.sensitivity ?? 'medium',
-        personas:
-          settings?.rewritePersonas && settings.rewritePersonas.length > 0
-            ? settings.rewritePersonas
-            : undefined,
-        recipientStyle,
+        context: adapter.scrapeThreadContext(),
+        relationshipType: 'workplace',
+        sensitivity: 'medium',
       });
-
-      if (signal.aborted || thisGeneration !== generation) return;
-
-      popup.hide();
 
       if (response.type === 'analysis-result' && response.result.shouldFlag) {
         currentResult = response.result;
-        trigger.show(response.result.riskLevel);
-        if (triggerCleanup) triggerCleanup();
-        triggerCleanup = adapter.placeTriggerIcon(trigger.element);
+        banner.showAnalysis(response.result, text);
 
-        // Show inline ghost text with the first (Warmer) rewrite as fast-path
-        const inputField = adapter.findInputField();
-        if (inputField && response.result.rewrites.length > 0) {
-          const topRewrite = response.result.rewrites[0].text;
-          inlineSuggestion.show(inputField, text, topRewrite, (accepted) => {
-            previousText = currentText;
-            adapter.writeBack(accepted);
-            sendMessage({ type: 'increment-stat', stat: 'rewritesAccepted' });
+        // Wire up rewrite buttons
+        document.querySelectorAll('.reword-use-rewrite').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.getAttribute('data-index') ?? '0');
+            const rewrite = response.result.rewrites[idx];
+            if (rewrite) {
+              adapter.writeBack(rewrite.text);
+              banner.hide();
+              window.postMessage({ type: 'reword-unblock' }, '*');
+              if (cachedInput) cachedInput.dispatchEvent(new Event('input', { bubbles: true }));
+              sendMessage({ type: 'increment-stat', stat: 'rewritesAccepted' });
+            }
           });
-        }
+        });
 
-        // Record flag event for history (#1)
         sendMessage({
           type: 'record-flag',
           event: {
@@ -250,31 +201,83 @@ function init(): void {
           },
         });
       } else {
-        trigger.hide();
-        inlineSuggestion.dismiss();
+        banner.hide();
         currentResult = null;
       }
-    },
+    } catch (err) {
+      console.warn('[Reword] analysis error:', err);
+      banner.hide();
+    }
+    analyzing = false;
+  }
+
+  // Watch input with debounced analysis
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  function onInputChange(): void {
+    if (!cachedInput) return;
+    const text = getTextFrom(cachedInput);
+
+    if (debounceTimer) clearTimeout(debounceTimer);
+
+    if (text.length < MIN_MESSAGE_LENGTH) {
+      banner.hide();
+      return;
+    }
+
+    // Quick heuristic check — show warning INSTANTLY if harsh
+    const score = scoreMessage(text);
+    if (score < HEURISTIC_THRESHOLD) {
+      banner.hide();
+      return;
+    }
+
+    // Show warning immediately — don't wait for AI
+    banner.show(text);
+    console.log('[Reword] flagged, score:', score.toFixed(2), 'text:', text.slice(0, 50));
+
+    // Debounce the full AI analysis for detailed rewrites
+    debounceTimer = setTimeout(() => {
+      analyzeMessage(text);
+    }, AI_DEBOUNCE_MS);
+  }
+
+  // Attach input listener to the cached element
+  function attachInputListener(el: HTMLElement): void {
+    if (el === cachedInput) return;
+    cachedInput = el;
+    console.log('[Reword] watching input:', el.className.slice(0, 60));
+    el.addEventListener('input', onInputChange);
+    // Also listen for keyup as fallback (some platforms don't fire 'input' on contenteditable)
+    el.addEventListener('keyup', onInputChange);
+  }
+
+  // Poll for input field
+  setInterval(() => {
+    const input = adapter.findInputField() ??
+      document.querySelector<HTMLElement>('[contenteditable="true"][role="textbox"]') ??
+      document.querySelector<HTMLElement>('[contenteditable="true"]');
+    if (input && input !== cachedInput) {
+      attachInputListener(input);
+    }
+  }, 2000);
+
+  // Also detect via focus
+  document.addEventListener('focusin', (e) => {
+    const t = e.target as HTMLElement;
+    if (t?.isContentEditable || t?.getAttribute?.('contenteditable') === 'true' ||
+        t?.getAttribute?.('role') === 'textbox') {
+      attachInputListener(t);
+    }
+  }, true);
+
+  // Listen for blocked Enter from shadow-pierce.js (MAIN world)
+  window.addEventListener('message', (e) => {
+    if (e.data?.type !== 'reword-send-intercept') return;
+    const text = e.data.text ?? '';
+    if (text.length < MIN_MESSAGE_LENGTH) return;
+    console.log('[Reword] send intercepted via shadow-pierce:', text.slice(0, 50));
+    analyzeMessage(text);
   });
-
-  // Watch for input fields appearing (SPAs load them dynamically)
-  let domCheckTimer: ReturnType<typeof setTimeout> | null = null;
-  const domObserver = new MutationObserver(() => {
-    if (domCheckTimer) return;
-    domCheckTimer = setTimeout(() => {
-      domCheckTimer = null;
-      const input = adapter.findInputField();
-      if (input && input !== observer.currentElement) {
-        observer.observe(input);
-      }
-    }, 500);
-  });
-
-  domObserver.observe(document.body, { childList: true, subtree: true });
-
-  // Initial check
-  const input = adapter.findInputField();
-  if (input) observer.observe(input);
 }
 
 if (document.readyState === 'loading') {

@@ -7,15 +7,37 @@ import { join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Chrome extension needs separate builds:
+// - service-worker: ESM (has "type": "module" in manifest)
+// - content script: IIFE (no module support in content scripts)
+// - options page: IIFE (loaded via <script> tag)
+
+function createBuild(name: string, entry: string, format: 'es' | 'iife') {
+  return {
+    rollupOptions: {
+      input: { [name]: resolve(__dirname, entry) },
+      output: {
+        format,
+        entryFileNames: '[name].js',
+        dir: 'dist',
+      },
+    },
+    target: 'ES2022' as const,
+    minify: false,
+    sourcemap: true,
+    emptyOutDir: false,
+  };
+}
+
+// We'll use a multi-pass approach via a custom plugin
 export default defineConfig({
   build: {
     rollupOptions: {
       input: {
         'service-worker': resolve(__dirname, 'src/background/service-worker.ts'),
-        'content': resolve(__dirname, 'src/content/index.ts'),
-        'options': resolve(__dirname, 'src/options/options.ts'),
       },
       output: {
+        format: 'es',
         entryFileNames: '[name].js',
         dir: 'dist',
       },
@@ -32,8 +54,8 @@ export default defineConfig({
         mkdirSync(join('dist', 'options'), { recursive: true });
         copyFileSync('src/options/options.html', join('dist', 'options', 'options.html'));
         copyFileSync('src/options/options.css', join('dist', 'options', 'options.css'));
-        if (existsSync('assets')) {
-          cpSync(join('assets'), join('dist', 'assets'), { recursive: true });
+        if (existsSync('src/assets')) {
+          cpSync(join('src', 'assets'), join('dist', 'assets'), { recursive: true });
         }
       },
     },

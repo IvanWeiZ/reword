@@ -15,7 +15,8 @@
     "https://outlook.office.com/*",
     "https://teams.microsoft.com/*",
     "https://web.whatsapp.com/*",
-    "https://generativelanguage.googleapis.com/*"
+    "https://generativelanguage.googleapis.com/*",
+    "http://localhost/*"
   ],
   "background": {
     "service_worker": "service-worker.js",
@@ -33,10 +34,31 @@
         "https://outlook.live.com/*",
         "https://outlook.office.com/*",
         "https://teams.microsoft.com/*",
-        "https://web.whatsapp.com/*"
+        "https://web.whatsapp.com/*",
+        "http://localhost/*"
+      ],
+      "js": ["shadow-pierce.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://mail.google.com/*",
+        "https://www.linkedin.com/*",
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://*.slack.com/*",
+        "https://discord.com/*",
+        "https://outlook.live.com/*",
+        "https://outlook.office.com/*",
+        "https://teams.microsoft.com/*",
+        "https://web.whatsapp.com/*",
+        "http://localhost/*"
       ],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "options_page": "options/options.html",
