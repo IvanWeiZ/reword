@@ -343,4 +343,65 @@ test.describe('Send interception (standalone)', () => {
 
     await browser.close();
   });
+
+  test('unblock after rewrite: replacing text clears block state', async () => {
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    await page.setContent(`<!DOCTYPE html><html><body>
+      <div contenteditable="true" role="textbox" style="min-height:50px;padding:10px;border:1px solid #ccc;"></div>
+      <button class="msg-form__send-button" type="submit" style="padding:8px 16px;">Send</button>
+      <div id="log"></div>
+    </body></html>`);
+
+    await page.evaluate(shadowPierceCode);
+    await page.evaluate(() => {
+      document.querySelector('[contenteditable]')!.addEventListener('keydown', (e) => {
+        if ((e as KeyboardEvent).key === 'Enter' && !(e as KeyboardEvent).shiftKey) {
+          document.getElementById('log')!.textContent = 'SENT';
+        }
+      });
+    });
+    await page.waitForTimeout(1500);
+
+    // Type harsh text — should be blocked
+    const input = page.locator('[contenteditable="true"]');
+    await input.click();
+    await input.type(HARSH_TEXT);
+    await page.waitForTimeout(600);
+
+    // Send button should be disabled (opacity dimmed)
+    const sendBtn = page.locator('.msg-form__send-button');
+    const opacity = await sendBtn.evaluate(el => getComputedStyle(el).opacity);
+    expect(parseFloat(opacity)).toBeLessThan(1);
+
+    // Block bar should be visible
+    await expect(page.locator('#reword-block-bar')).toBeVisible();
+
+    // Simulate rewrite acceptance: replace text with clean version + send unblock message
+    await input.evaluate(el => { el.textContent = 'I appreciate your perspective on this.'; });
+    await page.evaluate(() => {
+      window.postMessage({ type: 'reword-unblock' }, '*');
+      document.querySelector('[contenteditable]')!.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(600);
+
+    // Block bar should be hidden
+    await expect(page.locator('#reword-block-bar')).toBeHidden();
+
+    // Send button should be re-enabled (full opacity)
+    const opacityAfter = await sendBtn.evaluate(el => getComputedStyle(el).opacity);
+    expect(parseFloat(opacityAfter)).toBeGreaterThanOrEqual(0.9);
+
+    // Verify the block style tag is removed
+    const blockStyle = await page.locator('#reword-block-style').count();
+    expect(blockStyle).toBe(0);
+
+    // Should be able to send now
+    await input.press('Enter');
+    await page.waitForTimeout(500);
+    expect(await page.locator('#log').textContent()).toContain('SENT');
+
+    await browser.close();
+  });
 });

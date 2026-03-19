@@ -57,10 +57,23 @@ function createWarningBanner(): {
     element: banner,
     show(_text: string) {
       content.innerHTML = `
+        <style>
+          @keyframes reword-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+          @keyframes reword-spin { to { transform: rotate(360deg); } }
+          .reword-spinner {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white; border-radius: 50%;
+            animation: reword-spin 0.8s linear infinite;
+            vertical-align: middle; margin-right: 8px;
+          }
+          .reword-checking { animation: reword-pulse 1.5s ease-in-out infinite; }
+        </style>
         <div style="display:flex;align-items:center;gap:12px;">
           <span style="font-size:24px;">⚠️</span>
-          <div style="flex:1;">
-            <strong>Reword:</strong> This message may come across as harsh. Checking tone...
+          <div style="flex:1;" class="reword-checking">
+            <span class="reword-spinner"></span>
+            <strong>Reword:</strong> Harsh tone detected — analyzing for kinder alternatives...
           </div>
           <button id="reword-dismiss" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:14px;">Dismiss</button>
         </div>`;

@@ -62,7 +62,6 @@ let lastScore = 0;
 let warningBar: HTMLElement | null = null;
 let sendAnyway = false;
 let shield: HTMLElement | null = null;
-let disabledButtons: HTMLElement[] = [];
 
 function getEditableText(): string {
   if (!cachedEditable || !document.contains(cachedEditable)) {
@@ -126,31 +125,30 @@ function hideShield(): void {
   }
 }
 
-// 5. Disable/enable send buttons directly
+// 5. Disable/enable send buttons via global style (survives React re-renders)
+let blockStyleEl: HTMLStyleElement | null = null;
+
 function disableSendButtons(): void {
-  const buttons = document.querySelectorAll<HTMLElement>(SEND_BUTTON_SELECTOR);
-  disabledButtons = [];
-  buttons.forEach(btn => {
-    if (!btn.dataset.rewordDisabled) {
-      btn.dataset.rewordDisabled = 'true';
-      btn.dataset.rewordOrigPointerEvents = btn.style.pointerEvents;
-      btn.dataset.rewordOrigOpacity = btn.style.opacity;
-      btn.style.pointerEvents = 'none';
-      btn.style.opacity = '0.4';
-      disabledButtons.push(btn);
+  if (blockStyleEl) return; // already blocked
+  blockStyleEl = document.createElement('style');
+  blockStyleEl.id = 'reword-block-style';
+  blockStyleEl.textContent = `
+    ${SEND_SELECTORS.join(',\n    ')} {
+      pointer-events: none !important;
+      opacity: 0.4 !important;
+      cursor: not-allowed !important;
     }
-  });
+  `;
+  document.head.appendChild(blockStyleEl);
 }
 
 function enableSendButtons(): void {
-  disabledButtons.forEach(btn => {
-    btn.style.pointerEvents = btn.dataset.rewordOrigPointerEvents ?? '';
-    btn.style.opacity = btn.dataset.rewordOrigOpacity ?? '';
-    delete btn.dataset.rewordDisabled;
-    delete btn.dataset.rewordOrigPointerEvents;
-    delete btn.dataset.rewordOrigOpacity;
-  });
-  disabledButtons = [];
+  if (blockStyleEl) {
+    blockStyleEl.remove();
+    blockStyleEl = null;
+  }
+  // Also remove any stale style tag (in case ref was lost)
+  document.getElementById('reword-block-style')?.remove();
 }
 
 // 6. Warning bar
