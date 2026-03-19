@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { buildAnalysisPrompt, buildIncomingAnalysisPrompt } from '../../src/shared/prompts';
+import {
+  buildAnalysisPrompt,
+  buildIncomingAnalysisPrompt,
+  detectEscalation,
+} from '../../src/shared/prompts';
+import type { ThreadMessage } from '../../src/shared/types';
 
 describe('buildAnalysisPrompt', () => {
   it('includes the user message text', () => {
@@ -139,6 +144,123 @@ describe('buildAnalysisPrompt', () => {
     const prompt = buildAnalysisPrompt('test', 'workplace', 'medium', [], { personas });
     expect(prompt).toContain('"Empathetic": Use I-statements and validate feelings');
     expect(prompt).toContain('exactly 1 rewrites');
+  });
+});
+
+describe('detectEscalation', () => {
+  it('detects escalation when multiple self messages contain harsh words', () => {
+    const thread: ThreadMessage[] = [
+      { sender: 'other', text: 'Can you finish the report?' },
+      { sender: 'self', text: 'This is ridiculous, I already sent it' },
+      { sender: 'other', text: 'I did not receive it' },
+      { sender: 'self', text: 'That is useless, check your inbox' },
+      { sender: 'other', text: 'It is not there' },
+      { sender: 'self', text: 'This whole process is stupid' },
+    ];
+    const result = detectEscalation(thread);
+    expect(result.isEscalating).toBe(true);
+    expect(result.signals).toContain('Multiple harsh messages detected in this conversation');
+  });
+
+  it('does not flag a calm conversation', () => {
+    const thread: ThreadMessage[] = [
+      { sender: 'other', text: 'Hey, could you review the PR?' },
+      { sender: 'self', text: 'Sure, I will take a look this afternoon' },
+      { sender: 'other', text: 'Thanks, no rush' },
+    ];
+    const result = detectEscalation(thread);
+    expect(result.isEscalating).toBe(false);
+    expect(result.signals).toHaveLength(0);
+  });
+
+  it('detects escalation from increasing message length', () => {
+    const thread: ThreadMessage[] = [
+      { sender: 'self', text: 'OK noted' },
+      { sender: 'other', text: 'Please elaborate' },
+      { sender: 'self', text: 'I think we need to discuss this further in a meeting' },
+      { sender: 'other', text: 'Why?' },
+      {
+        sender: 'self',
+        text: 'Because this is getting out of hand and we clearly have different views on how to approach this project and I want to make sure everyone is aligned before we proceed any further',
+      },
+    ];
+    const result = detectEscalation(thread);
+    expect(result.isEscalating).toBe(true);
+    expect(result.signals).toContain(
+      'Messages are getting progressively longer, suggesting frustration',
+    );
+  });
+
+  it('returns descriptive signals', () => {
+    const thread: ThreadMessage[] = [
+      { sender: 'self', text: 'This is ridiculous' },
+      { sender: 'other', text: 'What do you mean?' },
+      { sender: 'self', text: 'Everything about this is useless!!!' },
+    ];
+    const result = detectEscalation(thread);
+    expect(result.isEscalating).toBe(true);
+    expect(result.signals.length).toBeGreaterThan(0);
+    result.signals.forEach((signal) => {
+      expect(typeof signal).toBe('string');
+      expect(signal.length).toBeGreaterThan(10);
+    });
+  });
+
+  it('detects excessive capitalization', () => {
+    const thread: ThreadMessage[] = [
+      { sender: 'other', text: 'We need to talk about the deadline' },
+      { sender: 'self', text: 'I ALREADY TOLD YOU IT IS NOT POSSIBLE' },
+    ];
+    const result = detectEscalation(thread);
+    expect(result.isEscalating).toBe(true);
+    expect(result.signals).toContain(
+      'Excessive capitalization or punctuation detected in recent messages',
+    );
+  });
+
+  it('detects rapid back-and-forth exchange', () => {
+    const thread: ThreadMessage[] = [
+      { sender: 'self', text: 'No' },
+      { sender: 'other', text: 'Yes' },
+      { sender: 'self', text: 'No way' },
+      { sender: 'other', text: 'Yes way' },
+    ];
+    const result = detectEscalation(thread);
+    expect(result.isEscalating).toBe(true);
+    expect(result.signals).toContain(
+      'Rapid back-and-forth exchange detected, suggesting heated discussion',
+    );
+  });
+
+  it('returns no escalation for empty thread', () => {
+    const result = detectEscalation([]);
+    expect(result.isEscalating).toBe(false);
+    expect(result.signals).toHaveLength(0);
+  });
+});
+
+describe('buildAnalysisPrompt de-escalation', () => {
+  it('includes de-escalation instructions when thread is escalating', () => {
+    const escalatingThread: ThreadMessage[] = [
+      { sender: 'other', text: 'You did not do it right' },
+      { sender: 'self', text: 'That is ridiculous, I followed all the steps' },
+      { sender: 'other', text: 'Clearly not' },
+      { sender: 'self', text: 'This is useless, you never check properly' },
+    ];
+    const prompt = buildAnalysisPrompt('Whatever', 'workplace', 'medium', escalatingThread);
+    expect(prompt).toContain('ESCALATION DETECTED');
+    expect(prompt).toContain('De-escalate');
+    expect(prompt).toContain('I understand this is frustrating');
+  });
+
+  it('does not include de-escalation for calm threads', () => {
+    const calmThread: ThreadMessage[] = [
+      { sender: 'other', text: 'Can you send the file?' },
+      { sender: 'self', text: 'Sure, here it is' },
+    ];
+    const prompt = buildAnalysisPrompt('Thanks for your patience', 'workplace', 'medium', calmThread);
+    expect(prompt).not.toContain('ESCALATION DETECTED');
+    expect(prompt).not.toContain('De-escalate');
   });
 });
 

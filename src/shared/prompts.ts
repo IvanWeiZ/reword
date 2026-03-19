@@ -1,5 +1,98 @@
 import type { RelationshipType, RewritePersona, Sensitivity, ThreadMessage } from './types';
 
+const HARSH_KEYWORDS = [
+  'ridiculous',
+  'useless',
+  'stupid',
+  'incompetent',
+  'pathetic',
+  'absurd',
+  'terrible',
+  'horrible',
+  'awful',
+  'idiotic',
+  'moronic',
+  'garbage',
+  'trash',
+  'worthless',
+  'joke',
+  'crap',
+  'damn',
+  'hell',
+  'bullshit',
+  'shit',
+];
+
+export function detectEscalation(threadContext: ThreadMessage[]): {
+  isEscalating: boolean;
+  signals: string[];
+} {
+  const signals: string[] = [];
+
+  if (threadContext.length === 0) {
+    return { isEscalating: false, signals };
+  }
+
+  // Signal 1: Multiple self messages with harsh keywords
+  const selfMessages = threadContext.filter((m) => m.sender === 'self');
+  const harshSelfMessages = selfMessages.filter((m) => {
+    const lower = m.text.toLowerCase();
+    return HARSH_KEYWORDS.some((kw) => lower.includes(kw));
+  });
+  if (harshSelfMessages.length >= 2) {
+    signals.push('Multiple harsh messages detected in this conversation');
+  }
+
+  // Signal 2: Increasing message length (frustration = longer messages)
+  if (selfMessages.length >= 3) {
+    const lengths = selfMessages.map((m) => m.text.length);
+    let increasing = true;
+    for (let i = 1; i < lengths.length; i++) {
+      if (lengths[i] <= lengths[i - 1]) {
+        increasing = false;
+        break;
+      }
+    }
+    if (increasing) {
+      signals.push('Messages are getting progressively longer, suggesting frustration');
+    }
+  }
+
+  // Signal 3: Excessive caps or punctuation in recent messages
+  const recentSelf = selfMessages.slice(-3);
+  const hasExcessiveCapsOrPunctuation = recentSelf.some((m) => {
+    const text = m.text;
+    if (text.length < 5) return false;
+    const upperCount = (text.match(/[A-Z]/g) || []).length;
+    const letterCount = (text.match(/[A-Za-z]/g) || []).length;
+    const capsRatio = letterCount > 0 ? upperCount / letterCount : 0;
+    const excessivePunctuation = /[!?]{3,}/.test(text);
+    return capsRatio > 0.5 || excessivePunctuation;
+  });
+  if (hasExcessiveCapsOrPunctuation) {
+    signals.push('Excessive capitalization or punctuation detected in recent messages');
+  }
+
+  // Signal 4: Rapid-fire back-and-forth (4+ alternating messages)
+  if (threadContext.length >= 4) {
+    let alternatingCount = 1;
+    let maxAlternating = 1;
+    for (let i = 1; i < threadContext.length; i++) {
+      if (threadContext[i].sender !== threadContext[i - 1].sender) {
+        alternatingCount++;
+        maxAlternating = Math.max(maxAlternating, alternatingCount);
+      } else {
+        alternatingCount = 1;
+      }
+    }
+    if (maxAlternating >= 4) {
+      signals.push('Rapid back-and-forth exchange detected, suggesting heated discussion');
+    }
+  }
+
+  return { isEscalating: signals.length > 0, signals };
+}
+
 const RELATIONSHIP_INSTRUCTIONS: Record<RelationshipType, string> = {
   romantic: `You are analyzing a message in a romantic relationship context.
 Flag: sarcasm, emotional dismissal, bringing up past arguments, passive-aggression, coldness.
@@ -47,6 +140,17 @@ export function buildAnalysisPrompt(
   const contextBlock = formatThreadContext(threadContext);
   const personaBlock = buildPersonaInstructions(options?.personas ?? []);
   const recipientBlock = buildRecipientStyleBlock(options?.recipientStyle);
+  const escalation = detectEscalation(threadContext);
+
+  let escalationBlock = '';
+  if (escalation.isEscalating) {
+    escalationBlock = `\n\nESCALATION DETECTED in this conversation thread. Signals: ${escalation.signals.join('; ')}
+When generating rewrites:
+- Include a "De-escalate" rewrite option that acknowledges the other person's perspective
+- The de-escalation rewrite should: lower the emotional temperature, validate the other person's concerns, and redirect toward a solution
+- Avoid dismissive language like "calm down" — instead use "I understand this is frustrating"
+- Prioritize the de-escalation rewrite as the first option`;
+  }
 
   const rewriteCount = options?.personas?.length || 3;
   const rewriteInstruction =
@@ -65,7 +169,7 @@ Rules:
 - Do NOT flag factual/logistical messages (meeting at 3, see attached, etc.)
 - Do NOT flag messages that are already warm and clear
 - ${rewriteInstruction}
-${personaBlock}${contextBlock}
+${personaBlock}${contextBlock}${escalationBlock}
 
 Draft message to analyze:
 "${message}"
