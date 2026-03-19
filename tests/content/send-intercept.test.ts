@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { scoreMessage } from '../../src/content/heuristic-scorer';
 
 describe('Send interception', () => {
   function createInput(): HTMLDivElement {
@@ -87,5 +88,11 @@ describe('Send interception', () => {
     expect(blocked).toBe(true);
 
     parent.remove();
+  });
+
+  it('quickScore equivalent catches negative emojis', () => {
+    // Verify the heuristic scorer (which quickScore mirrors) flags negative emojis
+    const score = scoreMessage('this is ridiculous 🙄');
+    expect(score).toBeGreaterThanOrEqual(0.3);
   });
 });

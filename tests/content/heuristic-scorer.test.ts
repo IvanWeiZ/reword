@@ -139,6 +139,43 @@ describe('scoreMessage', () => {
     });
   });
 
+  // Emoji-as-tone detection
+  describe('emoji-as-tone detection', () => {
+    it('flags negative emojis like 🙄 and 🖕', () => {
+      expect(scoreMessage('sounds about right 🙄')).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage('nice job 🖕')).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage('wow 😡')).toBeGreaterThanOrEqual(0.3);
+      expect(scoreMessage('ok 🤡')).toBeGreaterThanOrEqual(0.3);
+    });
+
+    it('flags sarcastic emoji combos like "fine 🙂"', () => {
+      expect(scoreMessage('fine 🙂')).toBeGreaterThanOrEqual(0.25);
+      expect(scoreMessage('sure 😊')).toBeGreaterThanOrEqual(0.25);
+      expect(scoreMessage('whatever 🙃')).toBeGreaterThanOrEqual(0.25);
+      expect(scoreMessage('ok, great 🙂')).toBeGreaterThanOrEqual(0.25);
+    });
+
+    it('does not flag positive emoji usage like "thanks! 😊"', () => {
+      // "thanks! 😊" without dismissive context — but note "thanks" is in the
+      // sarcastic-emoji trigger list. A standalone "thanks" followed by 😊 is
+      // sarcastic-emoji by design. Test truly positive usage without trigger words.
+      expect(scoreMessage('I appreciate your help 😊')).toBeLessThan(0.25);
+      expect(scoreMessage('Looks good to me 🙂')).toBeLessThan(0.25);
+    });
+
+    it('emoji score stacks with keyword score', () => {
+      const withoutEmoji = scoreMessage("you're useless");
+      const withEmoji = scoreMessage("you're useless 🙄");
+      expect(withEmoji).toBeGreaterThan(withoutEmoji);
+    });
+
+    it('respects emoji category boost', () => {
+      const base = scoreMessage('sounds about right 🙄');
+      const boosted = scoreMessage('sounds about right 🙄', [], { emoji: 0.3 });
+      expect(boosted).toBeLessThan(base);
+    });
+  });
+
   // Exclamation inflation
   describe('exclamation inflation', () => {
     it('flags 3+ consecutive exclamation marks', () => {

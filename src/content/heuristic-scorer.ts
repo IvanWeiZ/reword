@@ -82,6 +82,19 @@ const DIRECTED_INSULT_RE = /\byou\s+(are|r)\s+(\w+\s+)?(stupid|dumb|useless|path
 const DIRECTED_INSULT_WEIGHT = 0.45;
 
 /**
+ * Negative emojis — inherently hostile or dismissive emoji.
+ * 🙄 😒 😠 😡 😤 🤬 💩 🖕 👎 🤦 🤡
+ */
+const NEGATIVE_EMOJI_RE = /[\u{1F644}\u{1F612}\u{1F620}\u{1F621}\u{1F624}\u{1F92C}\u{1F4A9}\u{1F595}\u{1F44E}\u{1F926}\u{1F921}]/u;
+const NEGATIVE_EMOJI_WEIGHT = 0.3;
+
+/**
+ * Sarcastic emoji — 🙂 😊 🙃 ☺ after dismissive/negative text.
+ */
+const SARCASTIC_EMOJI_RE = /\b(fine|whatever|sure|okay|ok|great|thanks|right)\b[.!,]?\s*[\u{1F642}\u{1F60A}\u{1F643}\u{263A}]/iu;
+const SARCASTIC_EMOJI_WEIGHT = 0.25;
+
+/**
  * Each negative keyword has a weight. Within the "keywords" category,
  * only the highest-weight match counts.
  */
@@ -140,6 +153,7 @@ export function scoreMessage(
   let exclamationInflationScore = 0;
   let profanityScore = 0;
   let directedInsultScore = 0;
+  let emojiScore = 0;
   // Check passive-aggressive patterns — highest-weight match + small bonus for extras
   const EXTRA_MATCH_BONUS = 0.15;
   const PATTERN_CAP = 0.7;
@@ -224,6 +238,14 @@ export function scoreMessage(
     directedInsultScore = DIRECTED_INSULT_WEIGHT;
   }
 
+  // Emoji-as-tone — negative emojis and sarcastic emoji combos
+  if (NEGATIVE_EMOJI_RE.test(text)) {
+    emojiScore = NEGATIVE_EMOJI_WEIGHT;
+  }
+  if (SARCASTIC_EMOJI_RE.test(text)) {
+    emojiScore = Math.max(emojiScore, SARCASTIC_EMOJI_WEIGHT);
+  }
+
   // User-defined custom patterns (#9) — take highest-weight match only
   if (customPatterns.length > 0) {
     for (const patStr of customPatterns) {
@@ -253,6 +275,7 @@ export function scoreMessage(
   customScore = Math.max(0, customScore - (categoryBoosts['custom'] ?? 0));
   profanityScore = Math.max(0, profanityScore - (categoryBoosts['profanity'] ?? 0));
   directedInsultScore = Math.max(0, directedInsultScore - (categoryBoosts['directed-insult'] ?? 0));
+  emojiScore = Math.max(0, emojiScore - (categoryBoosts['emoji'] ?? 0));
 
   return Math.min(
     1,
@@ -267,7 +290,8 @@ export function scoreMessage(
         hedgingScore +
         exclamationInflationScore +
         profanityScore +
-        directedInsultScore,
+        directedInsultScore +
+        emojiScore,
     ),
   );
 }

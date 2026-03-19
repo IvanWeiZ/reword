@@ -24,6 +24,8 @@ const DIRECTED_INSULT_RE = /\byou\s+(are|r)\s+(\w+\s+)?(stupid|dumb|useless|path
 const SARCASM_RE = /\boh\s+(great|wonderful|fantastic|perfect)\b/i;
 const SARCASM2_RE = /\bsure,?\s*(no problem at all|whatever you say)\b/i;
 const EXCESSIVE_PUNCT_RE = /[!?]{2,}/;
+const NEGATIVE_EMOJI_RE = /[\u{1F644}\u{1F612}\u{1F620}\u{1F621}\u{1F624}\u{1F92C}\u{1F4A9}\u{1F595}\u{1F44E}\u{1F926}\u{1F921}]/u;
+const SARCASTIC_EMOJI_RE = /\b(fine|whatever|sure|okay|ok|great|thanks|right)\b[.!,]?\s*[\u{1F642}\u{1F60A}\u{1F643}\u{263A}]/iu;
 // Pre-compiled PA patterns — hoisted to module scope to avoid per-call allocation
 const PA_PATTERNS: [RegExp, number][] = [
   [/\bfine\.\s*$/i, 0.35], [/\bwhatever\b/i, 0.35],
@@ -52,6 +54,9 @@ function quickScore(text: string): number {
   if (alpha.length >= 10 && text.replace(/[^A-Z]/g, '').length / alpha.length > 0.5) score += 0.3;
   if (EXCESSIVE_PUNCT_RE.test(text)) score += 0.3;
   if (SARCASM_RE.test(text) || SARCASM2_RE.test(text)) score += 0.3;
+
+  if (NEGATIVE_EMOJI_RE.test(text)) score += 0.3;
+  else if (SARCASTIC_EMOJI_RE.test(text)) score += 0.25;
 
   return Math.min(1, score);
 }
