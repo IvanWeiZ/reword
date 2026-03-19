@@ -18,12 +18,19 @@ const MIN_LENGTH = 3;
 
 const HARSH_WORD_RE = /\b(stupid|idiot|useless|pathetic|incompetent|worthless|dumb)\b/i;
 const MILD_WORD_RE = /\b(hate|disgusting|terrible|awful|annoying|ridiculous)\b/i;
-const PROFANITY_RE = /\b(fuck|fucking|fucked|shit|shitty|bullshit|ass|asshole|bitch|dumbass|dumb\s+ass|jackass|moron|imbecile|stfu|wtf|gtfo)\b/i;
+const PROFANITY_RE = /\b(fuck|fucking|fucked|shit|shitty|bullshit|ass|asshole|bitch|bitching|dumbass|dumb\s+ass|jackass|moron|imbecile|stfu|wtf|gtfo|crap)\b/i;
 const PROFANITY_DIRECTED_RE = /\b(fuck|screw|damn|piss)\s?(you|off|this|that|it|me)\b/i;
 const DIRECTED_INSULT_RE = /\byou\s+(are|r)\s+(\w+\s+)?(stupid|dumb|useless|pathetic|terrible|awful|incompetent|worthless|an?\s+idiot|an?\s+moron)\b/i;
 const SARCASM_RE = /\boh\s+(great|wonderful|fantastic|perfect)\b/i;
 const SARCASM2_RE = /\bsure,?\s*(no problem at all|whatever you say)\b/i;
 const EXCESSIVE_PUNCT_RE = /[!?]{2,}/;
+// Pre-compiled PA patterns — hoisted to module scope to avoid per-call allocation
+const PA_PATTERNS: [RegExp, number][] = [
+  [/\bfine\.\s*$/i, 0.35], [/\bwhatever\b/i, 0.35],
+  [/\bper my last email\b/i, 0.4], [/\bas I already mentioned\b/i, 0.35],
+  [/\bas previously stated\b/i, 0.35], [/\bthanks for nothing\b/i, 0.4],
+  [/\bas I already explained\b/i, 0.35],
+];
 
 function quickScore(text: string): number {
   if (!text || text.length < MIN_LENGTH) return 0;
@@ -32,14 +39,8 @@ function quickScore(text: string): number {
   if (PROFANITY_RE.test(text) || PROFANITY_DIRECTED_RE.test(text)) score += 0.45;
   if (DIRECTED_INSULT_RE.test(text)) score += 0.45;
 
-  const paPatterns: [RegExp, number][] = [
-    [/\bfine\.\s*$/i, 0.35], [/\bwhatever\b/i, 0.35],
-    [/\bper my last email\b/i, 0.4], [/\bas I already mentioned\b/i, 0.35],
-    [/\bas previously stated\b/i, 0.35], [/\bthanks for nothing\b/i, 0.4],
-    [/\bas I already explained\b/i, 0.35],
-  ];
   let paMax = 0;
-  for (const [re, w] of paPatterns) {
+  for (const [re, w] of PA_PATTERNS) {
     if (re.test(text)) paMax = Math.max(paMax, w);
   }
   score += paMax;
@@ -247,13 +248,6 @@ document.addEventListener('input', () => { checkCurrentText(); }, true);
 document.addEventListener('keyup', (e) => {
   if (e.key === 'Shift') return;
   checkCurrentText();
-}, true);
-// keydown fires BEFORE text changes, but we check anyway so score is as fresh as possible
-document.addEventListener('keydown', (e) => {
-  // Skip the Enter handler here — that's handled separately below
-  if (e.key === 'Enter') return;
-  // Force re-check by clearing lastCheckedText (text is about to change)
-  lastCheckedText = '';
 }, true);
 // selectionchange fires reliably on contenteditable even when input doesn't
 document.addEventListener('selectionchange', () => { checkCurrentText(); });

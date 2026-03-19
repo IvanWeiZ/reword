@@ -133,15 +133,18 @@ function init(): void {
 
   const banner = createWarningBanner();
 
+  // Shared handler for accepting a rewrite from any source (popup card or banner button)
+  function acceptRewrite(rewriteText: string): void {
+    adapter.writeBack(rewriteText);
+    banner.hide();
+    window.postMessage({ type: 'reword-unblock' }, '*');
+    if (cachedInput) cachedInput.dispatchEvent(new Event('input', { bubbles: true }));
+    sendMessage({ type: 'increment-stat', stat: 'rewritesAccepted' });
+  }
+
   const popup = new PopupCard({
     onRewrite: (text) => {
-      adapter.writeBack(text);
-      banner.hide();
-      // Tell shadow-pierce (MAIN world) to unblock — text has been replaced with clean rewrite
-      window.postMessage({ type: 'reword-unblock' }, '*');
-      // Also fire synthetic input event so shadow-pierce re-scores the new text
-      if (cachedInput) cachedInput.dispatchEvent(new Event('input', { bubbles: true }));
-      sendMessage({ type: 'increment-stat', stat: 'rewritesAccepted' });
+      acceptRewrite(text);
     },
     onDismiss: () => {
       banner.hide();
@@ -193,13 +196,7 @@ function init(): void {
           btn.addEventListener('click', () => {
             const idx = parseInt(btn.getAttribute('data-index') ?? '0');
             const rewrite = response.result.rewrites[idx];
-            if (rewrite) {
-              adapter.writeBack(rewrite.text);
-              banner.hide();
-              window.postMessage({ type: 'reword-unblock' }, '*');
-              if (cachedInput) cachedInput.dispatchEvent(new Event('input', { bubbles: true }));
-              sendMessage({ type: 'increment-stat', stat: 'rewritesAccepted' });
-            }
+            if (rewrite) acceptRewrite(rewrite.text);
           });
         });
 
@@ -254,13 +251,16 @@ function init(): void {
     }, AI_DEBOUNCE_MS);
   }
 
-  // Attach input listener to the cached element
+  // Attach input listener to the cached element (clean up old listeners to prevent leaks)
   function attachInputListener(el: HTMLElement): void {
     if (el === cachedInput) return;
+    if (cachedInput) {
+      cachedInput.removeEventListener('input', onInputChange);
+      cachedInput.removeEventListener('keyup', onInputChange);
+    }
     cachedInput = el;
     console.log('[Reword] watching input:', el.className.slice(0, 60));
     el.addEventListener('input', onInputChange);
-    // Also listen for keyup as fallback (some platforms don't fire 'input' on contenteditable)
     el.addEventListener('keyup', onInputChange);
   }
 
