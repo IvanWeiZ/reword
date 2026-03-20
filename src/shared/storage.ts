@@ -82,6 +82,20 @@ const migrations: Record<number, MigrationFn> = {
     data.schemaVersion = 5;
     return data;
   },
+  6: (data) => {
+    // v5 → v6: Migrate geminiApiKey to providerApiKeys, add aiProvider and preferredLanguage
+    const oldKey = (data.settings as any).geminiApiKey ?? '';
+    data.settings = {
+      ...data.settings,
+      aiProvider: 'gemini' as any,
+      providerApiKeys: { gemini: oldKey },
+      preferredLanguage: '',
+    };
+    delete (data.settings as any).geminiApiKey;
+    (data as any).contactProfiles = (data as any).contactProfiles ?? {};
+    data.schemaVersion = 6;
+    return data;
+  },
 };
 
 export function migrate(data: StoredData): StoredData {

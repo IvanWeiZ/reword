@@ -38,7 +38,7 @@ describe('migrate', () => {
       stats: DEFAULT_STORED_DATA.stats,
       dismissedPatterns: [],
     };
-    const result = migrate(partialData);
+    const result = migrate(partialData as any);
     expect(result.stats).toBeDefined();
     expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
@@ -66,15 +66,16 @@ describe('migrate', () => {
       },
       dismissedPatterns: [],
     };
-    const result = migrate(v1Data);
+    const result = migrate(v1Data as any);
     expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.settings.customPatterns).toEqual([]);
     expect(result.settings.theme).toBe('auto');
     expect(result.settings.rewritePersonas).toEqual([]);
     expect(result.settings.analyzeIncoming).toBe(false);
     expect(result.stats.recentFlags).toEqual([]);
-    // Preserved existing data
-    expect(result.settings.geminiApiKey).toBe('test-key');
+    // Preserved existing data: geminiApiKey migrated to providerApiKeys.gemini by v6
+    expect((result.settings as any).geminiApiKey).toBeUndefined();
+    expect(result.settings.providerApiKeys.gemini).toBe('test-key');
     expect(result.stats.totalAnalyzed).toBe(5);
   });
 
@@ -95,7 +96,7 @@ describe('migrate', () => {
       },
       dismissedPatterns: [],
     };
-    const result = migrate(v1Data);
+    const result = migrate(v1Data as any);
     expect(result.settings.enabledDomains).toEqual([]);
     expect(result.settings.customPatterns).toEqual([]);
     expect(result.settings.rewritePersonas).toEqual([]);
@@ -123,13 +124,13 @@ describe('migrate', () => {
     };
 
     // Migrate once
-    const first = migrate(v1Data);
+    const first = migrate(v1Data as any);
     // Migrate the already-migrated result again
     const second = migrate(first);
 
     expect(second).toEqual(first);
     expect(second.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(second.settings.geminiApiKey).toBe('my-key');
+    expect(second.settings.providerApiKeys.gemini).toBe('my-key');
     expect(second.settings.customPatterns).toEqual([]);
     expect(second.settings.theme).toBe('auto');
     expect(second.settings.rewritePersonas).toEqual([]);
@@ -142,7 +143,7 @@ describe('migrate', () => {
       ...DEFAULT_STORED_DATA,
       settings: {
         ...DEFAULT_STORED_DATA.settings,
-        geminiApiKey: 'existing-key',
+        providerApiKeys: { gemini: 'existing-key' },
         sensitivity: 'high' as const,
         customPatterns: ['pattern1'],
         theme: 'dark' as const,
@@ -168,7 +169,7 @@ describe('migrate', () => {
     const result = migrate(currentData);
 
     expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(result.settings.geminiApiKey).toBe('existing-key');
+    expect(result.settings.providerApiKeys.gemini).toBe('existing-key');
     expect(result.settings.sensitivity).toBe('high');
     expect(result.settings.customPatterns).toEqual(['pattern1']);
     expect(result.settings.theme).toBe('dark');
@@ -204,10 +205,11 @@ describe('migrate', () => {
       },
       dismissedPatterns: [],
     };
-    const result = migrate(v2Data);
+    const result = migrate(v2Data as any);
     expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.settings.suppressedPhrases).toEqual([]);
-    expect(result.settings.geminiApiKey).toBe('test-key');
+    // geminiApiKey migrated to providerApiKeys.gemini by v6
+    expect(result.settings.providerApiKeys.gemini).toBe('test-key');
     expect(result.settings.customPatterns).toEqual(['test']);
   });
 
@@ -217,14 +219,14 @@ describe('migrate', () => {
       schemaVersion: 999,
       settings: {
         ...DEFAULT_STORED_DATA.settings,
-        geminiApiKey: 'future-key',
+        providerApiKeys: { gemini: 'future-key' },
       },
     };
 
     // Should not throw and should preserve the data
     const result = migrate(futureData);
     expect(result.schemaVersion).toBe(999);
-    expect(result.settings.geminiApiKey).toBe('future-key');
+    expect(result.settings.providerApiKeys.gemini).toBe('future-key');
   });
 
   it('does not mutate the original data object', () => {
@@ -247,8 +249,164 @@ describe('migrate', () => {
     };
 
     const originalVersion = v1Data.schemaVersion;
-    migrate(v1Data);
+    migrate(v1Data as any);
     // The original object's schemaVersion should not be changed
     expect(v1Data.schemaVersion).toBe(originalVersion);
+  });
+
+  describe('v5 to v6 migration', () => {
+    it('migrates geminiApiKey to providerApiKeys.gemini', () => {
+      const v5Data = {
+        schemaVersion: 5,
+        settings: {
+          geminiApiKey: 'AIzaSyOldKey123',
+          sensitivity: 'medium' as const,
+          enabledDomains: [],
+          customPatterns: [],
+          theme: 'auto' as const,
+          rewritePersonas: [],
+          analyzeIncoming: false,
+          suppressedPhrases: [],
+        },
+        relationshipProfiles: {},
+        stats: {
+          totalAnalyzed: 0,
+          totalFlagged: 0,
+          rewritesAccepted: 0,
+          monthlyApiCalls: 0,
+          monthlyApiCallsResetDate: '2026-01-01',
+          recentFlags: [],
+          dismissedCategories: {},
+        },
+        dismissedPatterns: [],
+        weeklyStats: { weekStart: '', analyzed: 0, flagged: 0, rewritesAccepted: 0 },
+        previousWeeklyStats: null,
+        lastWeeklySummaryShown: '',
+      };
+
+      const result = migrate(v5Data as any);
+
+      expect(result.schemaVersion).toBe(6);
+      expect(result.settings.providerApiKeys.gemini).toBe('AIzaSyOldKey123');
+      expect(result.settings.aiProvider).toBe('gemini');
+      expect(result.settings.preferredLanguage).toBe('');
+      expect((result.settings as any).geminiApiKey).toBeUndefined();
+    });
+
+    it('migrates empty geminiApiKey to empty providerApiKeys.gemini', () => {
+      const v5Data = {
+        schemaVersion: 5,
+        settings: {
+          geminiApiKey: '',
+          sensitivity: 'low' as const,
+          enabledDomains: [],
+          customPatterns: [],
+          theme: 'auto' as const,
+          rewritePersonas: [],
+          analyzeIncoming: false,
+          suppressedPhrases: [],
+        },
+        relationshipProfiles: {},
+        stats: {
+          totalAnalyzed: 0,
+          totalFlagged: 0,
+          rewritesAccepted: 0,
+          monthlyApiCalls: 0,
+          monthlyApiCallsResetDate: '2026-01-01',
+          recentFlags: [],
+          dismissedCategories: {},
+        },
+        dismissedPatterns: [],
+        weeklyStats: { weekStart: '', analyzed: 0, flagged: 0, rewritesAccepted: 0 },
+        previousWeeklyStats: null,
+        lastWeeklySummaryShown: '',
+      };
+
+      const result = migrate(v5Data as any);
+
+      expect(result.schemaVersion).toBe(6);
+      expect(result.settings.providerApiKeys.gemini).toBe('');
+      expect(result.settings.aiProvider).toBe('gemini');
+      expect(result.settings.preferredLanguage).toBe('');
+    });
+
+    it('initialises contactProfiles as empty object', () => {
+      const v5Data = {
+        schemaVersion: 5,
+        settings: {
+          geminiApiKey: 'some-key',
+          sensitivity: 'medium' as const,
+          enabledDomains: [],
+          customPatterns: [],
+          theme: 'auto' as const,
+          rewritePersonas: [],
+          analyzeIncoming: false,
+          suppressedPhrases: [],
+        },
+        relationshipProfiles: {},
+        stats: {
+          totalAnalyzed: 0,
+          totalFlagged: 0,
+          rewritesAccepted: 0,
+          monthlyApiCalls: 0,
+          monthlyApiCallsResetDate: '2026-01-01',
+          recentFlags: [],
+          dismissedCategories: {},
+        },
+        dismissedPatterns: [],
+        weeklyStats: { weekStart: '', analyzed: 0, flagged: 0, rewritesAccepted: 0 },
+        previousWeeklyStats: null,
+        lastWeeklySummaryShown: '',
+      };
+
+      const result = migrate(v5Data as any);
+
+      expect(result.contactProfiles).toEqual({});
+    });
+
+    it('preserves existing contactProfiles if already present', () => {
+      const v5Data = {
+        schemaVersion: 5,
+        settings: {
+          geminiApiKey: '',
+          sensitivity: 'medium' as const,
+          enabledDomains: [],
+          customPatterns: [],
+          theme: 'auto' as const,
+          rewritePersonas: [],
+          analyzeIncoming: false,
+          suppressedPhrases: [],
+        },
+        contactProfiles: {
+          'user@example.com': {
+            displayName: 'Alice',
+            platformId: 'user@example.com',
+            relationshipType: 'workplace' as const,
+            sensitivity: 'medium' as const,
+            toneGoal: 'Stay professional',
+            culturalContext: '',
+            createdAt: '2026-01-01',
+          },
+        },
+        relationshipProfiles: {},
+        stats: {
+          totalAnalyzed: 0,
+          totalFlagged: 0,
+          rewritesAccepted: 0,
+          monthlyApiCalls: 0,
+          monthlyApiCallsResetDate: '2026-01-01',
+          recentFlags: [],
+          dismissedCategories: {},
+        },
+        dismissedPatterns: [],
+        weeklyStats: { weekStart: '', analyzed: 0, flagged: 0, rewritesAccepted: 0 },
+        previousWeeklyStats: null,
+        lastWeeklySummaryShown: '',
+      };
+
+      const result = migrate(v5Data as any);
+
+      expect(result.contactProfiles['user@example.com'].displayName).toBe('Alice');
+    });
   });
 });
