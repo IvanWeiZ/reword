@@ -1,4 +1,5 @@
-import { GeminiClient } from './gemini-client';
+import { createProvider } from './providers';
+import type { AIProvider } from '../shared/types';
 import { OnDeviceClient } from './ondevice-client';
 import { loadStoredData, saveStoredData } from '../shared/storage';
 import {
@@ -9,7 +10,7 @@ import {
 } from '../shared/constants';
 import type { MessageToBackground, MessageFromBackground, StoredData } from '../shared/types';
 
-const gemini = new GeminiClient();
+let provider: AIProvider | null = null;
 const ondevice = new OnDeviceClient();
 
 /** Returns the ISO date string (YYYY-MM-DD) of the Monday starting the current week. */
@@ -48,7 +49,8 @@ export async function checkWeeklyReset(data: StoredData): Promise<boolean> {
 export async function handleMessage(message: MessageToBackground): Promise<MessageFromBackground> {
   switch (message.type) {
     case 'validate-api-key': {
-      const valid = await gemini.validateApiKey(message.apiKey);
+      const tempProvider = createProvider(message.provider);
+      const valid = await tempProvider.validateApiKey(message.apiKey);
       return { type: 'validate-api-key-result', valid };
     }
 
@@ -167,21 +169,45 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
       return { type: 'settings', data };
     }
 
+    case 'save-contact-profile': {
+      const data = await loadStoredData();
+      data.contactProfiles[message.profile.platformId] = message.profile;
+      await saveStoredData(data);
+      return { type: 'settings', data };
+    }
+
+    case 'delete-contact-profile': {
+      const data = await loadStoredData();
+      delete data.contactProfiles[message.platformId];
+      await saveStoredData(data);
+      return { type: 'settings', data };
+    }
+
+    case 'get-contact-profiles': {
+      const data = await loadStoredData();
+      return { type: 'contact-profiles', profiles: data.contactProfiles };
+    }
+
     case 'analyze-incoming': {
       // Feature #14: Two-way analysis
       try {
         const data = await loadStoredData();
-        if (!gemini.isConfigured() && data.settings.geminiApiKey) {
-          gemini.configure(data.settings.geminiApiKey);
+        const providerName = data.settings.aiProvider;
+        const apiKey = data.settings.providerApiKeys[providerName] ?? '';
+        if (!provider || provider.name !== providerName) {
+          provider = createProvider(providerName);
         }
-        if (!gemini.isConfigured()) {
+        if (!provider.isConfigured() && apiKey) {
+          provider.configure(apiKey);
+        }
+        if (!provider.isConfigured()) {
           return { type: 'analysis-error', error: 'Gemini API key not configured' };
         }
 
         data.stats.monthlyApiCalls++;
         await saveStoredData(data);
 
-        const result = await gemini.analyzeIncoming(message.text, message.context);
+        const result = await provider.analyzeIncoming(message.text, message.context);
         return { type: 'incoming-result', result };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -194,9 +220,18 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
       try {
         const data = await loadStoredData();
 
-        if (!gemini.isConfigured() && data.settings.geminiApiKey) {
-          gemini.configure(data.settings.geminiApiKey);
+        const providerName = data.settings.aiProvider;
+        const apiKey = data.settings.providerApiKeys[providerName] ?? '';
+        if (!provider || provider.name !== providerName) {
+          provider = createProvider(providerName);
         }
+        if (!provider.isConfigured() && apiKey) {
+          provider.configure(apiKey);
+        }
+
+        const contactProfile = message.recipientId
+          ? data.contactProfiles[message.recipientId]
+          : undefined;
 
         // Tier 1: on-device AI (optional)
         const ondeviceResult = await ondevice.checkTone(message.text);
@@ -217,8 +252,8 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
           };
         }
 
-        // Tier 2: Gemini
-        if (!gemini.isConfigured()) {
+        // Tier 2: AI provider
+        if (!provider.isConfigured()) {
           return { type: 'analysis-error', error: 'Gemini API key not configured' };
         }
 
@@ -227,14 +262,15 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
         data.stats.monthlyApiCalls++;
         data.weeklyStats.analyzed++;
 
-        const result = await gemini.analyze(
+        const result = await provider.analyze(
           message.text,
           message.relationshipType,
           message.sensitivity,
           message.context,
           {
             personas: message.personas,
-            recipientStyle: message.recipientStyle,
+            contactProfile,
+            preferredLanguage: message.preferredLanguage,
           },
         );
 

@@ -4,7 +4,7 @@ import { MOCK_FLAGGED_RESULT, MOCK_CLEAN_RESULT } from '../mocks/mock-gemini-cli
 import { DEFAULT_STORED_DATA } from '../../src/shared/constants';
 import type { IncomingAnalysis, StoredData } from '../../src/shared/types';
 
-// --- Module-level mocks for GeminiClient and OnDeviceClient ---
+// --- Module-level mocks for provider factory and OnDeviceClient ---
 
 const {
   mockValidateApiKey,
@@ -13,6 +13,7 @@ const {
   mockIsConfigured,
   mockConfigure,
   mockCheckTone,
+  mockProviderName,
 } = vi.hoisted(() => ({
   mockValidateApiKey: vi.fn(),
   mockAnalyze: vi.fn(),
@@ -20,17 +21,21 @@ const {
   mockIsConfigured: vi.fn().mockReturnValue(false),
   mockConfigure: vi.fn(),
   mockCheckTone: vi.fn(),
+  mockProviderName: { value: 'gemini' as string },
 }));
 
-vi.mock('../../src/background/gemini-client', () => {
+vi.mock('../../src/background/providers', () => {
   return {
-    GeminiClient: class MockGeminiClient {
-      validateApiKey = mockValidateApiKey;
-      analyze = mockAnalyze;
-      analyzeIncoming = mockAnalyzeIncoming;
-      isConfigured = mockIsConfigured;
-      configure = mockConfigure;
-    },
+    createProvider: vi.fn().mockImplementation(() => ({
+      get name() {
+        return mockProviderName.value;
+      },
+      validateApiKey: mockValidateApiKey,
+      analyze: mockAnalyze,
+      analyzeIncoming: mockAnalyzeIncoming,
+      isConfigured: mockIsConfigured,
+      configure: mockConfigure,
+    })),
   };
 });
 
@@ -52,7 +57,8 @@ function storedDataWithApiKey(overrides?: Partial<StoredData>): StoredData {
     ...DEFAULT_STORED_DATA,
     settings: {
       ...DEFAULT_STORED_DATA.settings,
-      geminiApiKey: 'test-api-key-123',
+      aiProvider: 'gemini',
+      providerApiKeys: { gemini: 'test-api-key-123' },
     },
     ...overrides,
   };
@@ -72,6 +78,7 @@ beforeEach(() => {
   mockIsConfigured.mockReset().mockReturnValue(false);
   mockConfigure.mockReset();
   mockCheckTone.mockReset().mockResolvedValue(null);
+  mockProviderName.value = 'gemini';
 });
 
 describe('handleMessage', () => {
@@ -110,7 +117,7 @@ describe('handleMessage', () => {
     expect((result as any).data.stats.rewritesAccepted).toBe(1);
   });
 
-  it('returns analysis-error when gemini is not configured', async () => {
+  it('returns analysis-error when provider is not configured', async () => {
     await mockStorage.local.set({ reword: DEFAULT_STORED_DATA }); // no API key
     const result = await handleMessage({
       type: 'analyze',
@@ -249,25 +256,33 @@ describe('handleMessage', () => {
   // --- New tests: validate-api-key ---
 
   describe('validate-api-key', () => {
-    it('returns valid: true when gemini client validates key', async () => {
+    it('returns valid: true when provider validates key', async () => {
       mockValidateApiKey.mockResolvedValue(true);
-      const result = await handleMessage({ type: 'validate-api-key', apiKey: 'good-key' });
+      const result = await handleMessage({
+        type: 'validate-api-key',
+        apiKey: 'good-key',
+        provider: 'gemini',
+      });
       expect(result).toEqual({ type: 'validate-api-key-result', valid: true });
       expect(mockValidateApiKey).toHaveBeenCalledWith('good-key');
     });
 
-    it('returns valid: false when gemini client rejects key', async () => {
+    it('returns valid: false when provider rejects key', async () => {
       mockValidateApiKey.mockResolvedValue(false);
-      const result = await handleMessage({ type: 'validate-api-key', apiKey: 'bad-key' });
+      const result = await handleMessage({
+        type: 'validate-api-key',
+        apiKey: 'bad-key',
+        provider: 'gemini',
+      });
       expect(result).toEqual({ type: 'validate-api-key-result', valid: false });
       expect(mockValidateApiKey).toHaveBeenCalledWith('bad-key');
     });
   });
 
-  // --- New tests: error handling when Gemini throws ---
+  // --- New tests: error handling when provider throws ---
 
   describe('analyze error handling', () => {
-    it('returns analysis-error when gemini.analyze throws an Error', async () => {
+    it('returns analysis-error when provider.analyze throws an Error', async () => {
       await mockStorage.local.set({ reword: storedDataWithApiKey() });
       mockIsConfigured.mockReturnValue(true);
       mockCheckTone.mockResolvedValue(null);
@@ -307,7 +322,7 @@ describe('handleMessage', () => {
   // --- New tests: On-device AI tier 1 ---
 
   describe('on-device AI tier 1 (analyze)', () => {
-    it('skips Gemini when on-device returns high-confidence non-flag', async () => {
+    it('skips provider when on-device returns high-confidence non-flag', async () => {
       await mockStorage.local.set({ reword: storedDataWithApiKey() });
       mockIsConfigured.mockReturnValue(true);
       mockCheckTone.mockResolvedValue({ shouldFlag: false, confidence: 0.95 });
@@ -323,11 +338,11 @@ describe('handleMessage', () => {
       expect(result.type).toBe('analysis-result');
       expect((result as any).result.shouldFlag).toBe(false);
       expect((result as any).result.riskLevel).toBe('low');
-      // Gemini should NOT have been called
+      // Provider should NOT have been called
       expect(mockAnalyze).not.toHaveBeenCalled();
     });
 
-    it('falls through to Gemini when on-device returns low confidence', async () => {
+    it('falls through to provider when on-device returns low confidence', async () => {
       await mockStorage.local.set({ reword: storedDataWithApiKey() });
       mockIsConfigured.mockReturnValue(true);
       mockCheckTone.mockResolvedValue({ shouldFlag: false, confidence: 0.5 });
@@ -345,7 +360,7 @@ describe('handleMessage', () => {
       expect(mockAnalyze).toHaveBeenCalled();
     });
 
-    it('falls through to Gemini when on-device returns shouldFlag: true (even high confidence)', async () => {
+    it('falls through to provider when on-device returns shouldFlag: true (even high confidence)', async () => {
       await mockStorage.local.set({ reword: storedDataWithApiKey() });
       mockIsConfigured.mockReturnValue(true);
       mockCheckTone.mockResolvedValue({ shouldFlag: true, confidence: 0.99 });
@@ -363,7 +378,7 @@ describe('handleMessage', () => {
       expect(mockAnalyze).toHaveBeenCalled();
     });
 
-    it('falls through to Gemini when on-device returns null', async () => {
+    it('falls through to provider when on-device returns null', async () => {
       await mockStorage.local.set({ reword: storedDataWithApiKey() });
       mockIsConfigured.mockReturnValue(true);
       mockCheckTone.mockResolvedValue(null);
@@ -382,10 +397,10 @@ describe('handleMessage', () => {
     });
   });
 
-  // --- New tests: Gemini configuration from storage ---
+  // --- New tests: provider configuration from storage ---
 
-  describe('auto-configure Gemini from storage', () => {
-    it('configures Gemini from stored API key when not yet configured (analyze)', async () => {
+  describe('auto-configure provider from storage', () => {
+    it('configures provider from stored API key when not yet configured (analyze)', async () => {
       await mockStorage.local.set({ reword: storedDataWithApiKey() });
       // First call: not configured. After configure(), it becomes configured.
       mockIsConfigured.mockReturnValueOnce(false).mockReturnValue(true);
@@ -404,7 +419,7 @@ describe('handleMessage', () => {
       expect(mockAnalyze).toHaveBeenCalled();
     });
 
-    it('configures Gemini from stored API key when not yet configured (analyze-incoming)', async () => {
+    it('configures provider from stored API key when not yet configured (analyze-incoming)', async () => {
       await mockStorage.local.set({ reword: storedDataWithApiKey() });
       mockIsConfigured.mockReturnValueOnce(false).mockReturnValue(true);
       const incomingResult: IncomingAnalysis = {
@@ -428,7 +443,7 @@ describe('handleMessage', () => {
 
   // --- New tests: analyze full flow ---
 
-  describe('analyze full flow with Gemini', () => {
+  describe('analyze full flow with provider', () => {
     it('increments stats and returns flagged result', async () => {
       const baseData = storedDataWithApiKey();
       await mockStorage.local.set({ reword: JSON.parse(JSON.stringify(baseData)) });
@@ -490,7 +505,7 @@ describe('handleMessage', () => {
       expect(stats.monthlyApiCalls).toBe(baseApiCalls + 1);
     });
 
-    it('passes personas and recipientStyle to gemini.analyze', async () => {
+    it('passes personas and contactProfile to provider.analyze', async () => {
       await mockStorage.local.set({ reword: storedDataWithApiKey() });
       mockIsConfigured.mockReturnValue(true);
       mockCheckTone.mockResolvedValue(null);
@@ -504,12 +519,12 @@ describe('handleMessage', () => {
         relationshipType: 'romantic',
         sensitivity: 'high',
         personas,
-        recipientStyle: 'casual',
       });
 
       expect(mockAnalyze).toHaveBeenCalledWith('test', 'romantic', 'high', [], {
         personas,
-        recipientStyle: 'casual',
+        contactProfile: undefined,
+        preferredLanguage: undefined,
       });
     });
   });
@@ -517,7 +532,7 @@ describe('handleMessage', () => {
   // --- New tests: analyze-incoming ---
 
   describe('analyze-incoming', () => {
-    it('returns analysis-error when Gemini is not configured and no stored key', async () => {
+    it('returns analysis-error when provider is not configured and no stored key', async () => {
       await mockStorage.local.set({ reword: DEFAULT_STORED_DATA });
       mockIsConfigured.mockReturnValue(false);
 
@@ -605,14 +620,14 @@ describe('handleMessage', () => {
         settings: {
           ...DEFAULT_STORED_DATA.settings,
           sensitivity: 'high' as const,
-          geminiApiKey: 'my-key',
+          providerApiKeys: { gemini: 'my-key' },
         },
       };
       await mockStorage.local.set({ reword: customData });
 
       const result = await handleMessage({ type: 'get-settings' });
       expect((result as any).data.settings.sensitivity).toBe('high');
-      expect((result as any).data.settings.geminiApiKey).toBe('my-key');
+      expect((result as any).data.settings.providerApiKeys.gemini).toBe('my-key');
     });
   });
 
@@ -650,6 +665,71 @@ describe('handleMessage', () => {
       const flags = (result as any).data.stats.recentFlags;
       expect(flags).toHaveLength(100); // still capped at 100
       expect(flags[0].textSnippet).toBe('newest'); // newest is first
+    });
+  });
+
+  // --- New tests: contact profile handlers ---
+
+  describe('contact profile handlers', () => {
+    it('save-contact-profile stores the profile by platformId', async () => {
+      await mockStorage.local.set({ reword: DEFAULT_STORED_DATA });
+      const profile = {
+        displayName: 'Alice',
+        platformId: 'gmail:alice@example.com',
+        relationshipType: 'workplace' as const,
+        sensitivity: 'medium' as const,
+        toneGoal: 'Be professional',
+        culturalContext: '',
+        createdAt: '2026-01-01T00:00:00Z',
+      };
+      const result = await handleMessage({ type: 'save-contact-profile', profile });
+      expect(result.type).toBe('settings');
+      expect((result as any).data.contactProfiles['gmail:alice@example.com']).toEqual(profile);
+    });
+
+    it('delete-contact-profile removes the profile', async () => {
+      const profile = {
+        displayName: 'Bob',
+        platformId: 'linkedin:Bob Smith',
+        relationshipType: 'workplace' as const,
+        sensitivity: 'low' as const,
+        toneGoal: '',
+        culturalContext: '',
+        createdAt: '2026-01-01T00:00:00Z',
+      };
+      const dataWithProfile = {
+        ...DEFAULT_STORED_DATA,
+        contactProfiles: { 'linkedin:Bob Smith': profile },
+      };
+      await mockStorage.local.set({ reword: dataWithProfile });
+
+      const result = await handleMessage({
+        type: 'delete-contact-profile',
+        platformId: 'linkedin:Bob Smith',
+      });
+      expect(result.type).toBe('settings');
+      expect((result as any).data.contactProfiles['linkedin:Bob Smith']).toBeUndefined();
+    });
+
+    it('get-contact-profiles returns all profiles', async () => {
+      const profile = {
+        displayName: 'Carol',
+        platformId: 'gmail:carol@example.com',
+        relationshipType: 'romantic' as const,
+        sensitivity: 'high' as const,
+        toneGoal: 'Be kind',
+        culturalContext: '',
+        createdAt: '2026-01-01T00:00:00Z',
+      };
+      const dataWithProfile = {
+        ...DEFAULT_STORED_DATA,
+        contactProfiles: { 'gmail:carol@example.com': profile },
+      };
+      await mockStorage.local.set({ reword: dataWithProfile });
+
+      const result = await handleMessage({ type: 'get-contact-profiles' });
+      expect(result.type).toBe('contact-profiles');
+      expect((result as any).profiles['gmail:carol@example.com']).toEqual(profile);
     });
   });
 });
