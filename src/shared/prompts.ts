@@ -1,4 +1,11 @@
-import type { RelationshipType, RewritePersona, Sensitivity, ThreadMessage } from './types';
+import type {
+  AnalysisOptions,
+  ContactProfile,
+  RelationshipType,
+  RewritePersona,
+  Sensitivity,
+  ThreadMessage,
+} from './types';
 
 const HARSH_KEYWORDS = [
   'ridiculous',
@@ -125,9 +132,24 @@ function buildPersonaInstructions(personas: RewritePersona[]): string {
   return `\n\nCustom rewrite styles requested by the user. Use these INSTEAD of the default 3 rewrites:\n${list}`;
 }
 
-function buildRecipientStyleBlock(recipientStyle?: string): string {
-  if (!recipientStyle) return '';
-  return `\n\nThe recipient's communication style (based on their recent messages): ${recipientStyle}\nMatch your rewrites to a similar register and formality level.`;
+function buildContactProfileBlock(contactProfile?: ContactProfile): string {
+  if (!contactProfile) return '';
+  const parts: string[] = [];
+  if (contactProfile.toneGoal) {
+    parts.push(`Tone goal for this recipient: ${contactProfile.toneGoal}`);
+  }
+  if (contactProfile.culturalContext) {
+    parts.push(`Cultural context: ${contactProfile.culturalContext}`);
+  }
+  if (parts.length === 0) return '';
+  return `\n\nRecipient profile for ${contactProfile.displayName}:\n${parts.join('\n')}`;
+}
+
+function buildLanguageBlock(preferredLanguage?: string): string {
+  if (!preferredLanguage) {
+    return '\n\nDetect the language of the draft message and write all rewrites in that same language.';
+  }
+  return `\n\nWrite all rewrites in ${preferredLanguage}.`;
 }
 
 export function buildAnalysisPrompt(
@@ -135,11 +157,12 @@ export function buildAnalysisPrompt(
   relationshipType: RelationshipType,
   sensitivity: Sensitivity,
   threadContext: ThreadMessage[],
-  options?: { personas?: RewritePersona[]; recipientStyle?: string },
+  options?: AnalysisOptions,
 ): string {
   const contextBlock = formatThreadContext(threadContext);
   const personaBlock = buildPersonaInstructions(options?.personas ?? []);
-  const recipientBlock = buildRecipientStyleBlock(options?.recipientStyle);
+  const contactBlock = buildContactProfileBlock(options?.contactProfile);
+  const languageBlock = buildLanguageBlock(options?.preferredLanguage);
   const escalation = detectEscalation(threadContext);
 
   let escalationBlock = '';
@@ -163,7 +186,7 @@ When generating rewrites:
 ${RELATIONSHIP_INSTRUCTIONS[relationshipType]}
 
 Sensitivity: ${SENSITIVITY_INSTRUCTIONS[sensitivity]}
-${recipientBlock}
+${languageBlock}${contactBlock}
 Rules:
 - Do NOT flag short affirmative messages (ok, sounds good, thanks, etc.)
 - Do NOT flag factual/logistical messages (meeting at 3, see attached, etc.)

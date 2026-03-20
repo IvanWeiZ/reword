@@ -75,12 +75,20 @@ describe('buildAnalysisPrompt', () => {
     expect(prompt).toContain('exactly 2 rewrites');
   });
 
-  it('includes recipient style when provided (#8)', () => {
+  it('includes contact profile toneGoal when provided', () => {
     const prompt = buildAnalysisPrompt('test', 'workplace', 'medium', [], {
-      recipientStyle: 'brief, uses emojis',
+      contactProfile: {
+        displayName: 'Bob',
+        platformId: 'bob@example.com',
+        relationshipType: 'workplace',
+        sensitivity: 'medium',
+        toneGoal: 'brief, uses emojis',
+        culturalContext: '',
+        createdAt: '2026-01-01',
+      },
     });
     expect(prompt).toContain('brief, uses emojis');
-    expect(prompt).toContain("recipient's communication style");
+    expect(prompt).toContain('Recipient profile for Bob');
   });
 
   it('defaults to 3 rewrites when no personas provided', () => {
@@ -95,9 +103,9 @@ describe('buildAnalysisPrompt', () => {
     expect(prompt).toContain('exactly 3 rewrites');
   });
 
-  it('omits recipient style block when not provided', () => {
+  it('omits contact profile block when not provided', () => {
     const prompt = buildAnalysisPrompt('test', 'workplace', 'medium', []);
-    expect(prompt).not.toContain("recipient's communication style");
+    expect(prompt).not.toContain('Recipient profile');
   });
 
   it('formats multiple thread context messages with sender labels', () => {
@@ -144,6 +152,52 @@ describe('buildAnalysisPrompt', () => {
     const prompt = buildAnalysisPrompt('test', 'workplace', 'medium', [], { personas });
     expect(prompt).toContain('"Empathetic": Use I-statements and validate feelings');
     expect(prompt).toContain('exactly 1 rewrites');
+  });
+
+  it('auto-detects language when no preferredLanguage is set', () => {
+    const prompt = buildAnalysisPrompt('test', 'workplace', 'medium', []);
+    expect(prompt).toContain('Detect the language');
+  });
+
+  it('includes specific language when preferredLanguage is provided', () => {
+    const prompt = buildAnalysisPrompt('test', 'workplace', 'medium', [], {
+      preferredLanguage: 'Spanish',
+    });
+    expect(prompt).toContain('Spanish');
+    expect(prompt).not.toContain('Detect the language');
+  });
+
+  it('injects toneGoal and culturalContext from contact profile', () => {
+    const prompt = buildAnalysisPrompt('test', 'workplace', 'medium', [], {
+      contactProfile: {
+        displayName: 'Alice',
+        platformId: 'alice@corp.com',
+        relationshipType: 'workplace',
+        sensitivity: 'high',
+        toneGoal: 'Be direct and concise',
+        culturalContext: 'High-context culture, indirect feedback preferred',
+        createdAt: '2026-01-01',
+      },
+    });
+    expect(prompt).toContain('Be direct and concise');
+    expect(prompt).toContain('High-context culture, indirect feedback preferred');
+    expect(prompt).toContain('Recipient profile for Alice');
+  });
+
+  it('omits contact profile block when toneGoal and culturalContext are both empty', () => {
+    const prompt = buildAnalysisPrompt('test', 'workplace', 'medium', [], {
+      contactProfile: {
+        displayName: 'Bob',
+        platformId: 'bob@corp.com',
+        relationshipType: 'workplace',
+        sensitivity: 'medium',
+        toneGoal: '',
+        culturalContext: '',
+        createdAt: '2026-01-01',
+      },
+    });
+    expect(prompt).not.toContain('Recipient profile');
+    expect(prompt).not.toContain('Bob');
   });
 });
 
