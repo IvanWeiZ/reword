@@ -1,4 +1,4 @@
-import type { AnalysisResult, Theme } from '../shared/types';
+import type { AnalysisResult, Theme, ContactProfile } from '../shared/types';
 import type { ConversationHealthTracker } from './conversation-health';
 import { detectPlatformDarkMode } from './dark-mode-detect';
 import { renderDiffHTML, escapeHTML } from './helpers';
@@ -35,6 +35,8 @@ export class PopupCard {
   private cooldownDismissed = false;
   private healthTracker: ConversationHealthTracker | null = null;
   private currentThreadId: string | null = null;
+  recipientId: string | null = null;
+  private savedContactIds: Set<string> = new Set();
 
   constructor(options: PopupCardOptions) {
     this.options = options;
@@ -124,6 +126,15 @@ export class PopupCard {
       .reword-health-breakdown.reword-expanded { display: block; }
       .reword-suppress-link { font-size: 11px; color: ${muted}; cursor: pointer; background: none; border: none; padding: 0; text-decoration: underline; display: block; text-align: center; margin-top: 6px; opacity: 0.7; }
       .reword-suppress-link:hover { opacity: 1; }
+      .reword-save-profile-link { font-size: 11px; color: ${muted}; cursor: pointer; background: none; border: none; padding: 0; text-decoration: underline; display: block; text-align: center; margin-top: 4px; opacity: 0.7; }
+      .reword-save-profile-link:hover { opacity: 1; }
+      .reword-save-profile-form { margin-top: 12px; padding: 12px; background: ${cardBg}; border-radius: 6px; border: 1px solid ${border}; font-size: 13px; }
+      .reword-save-profile-form label { display: block; font-size: 11px; color: ${muted}; margin-bottom: 2px; margin-top: 8px; }
+      .reword-save-profile-form label:first-child { margin-top: 0; }
+      .reword-save-profile-form input, .reword-save-profile-form select { width: 100%; box-sizing: border-box; padding: 6px 8px; border-radius: 4px; border: 1px solid ${border}; background: ${bg}; color: ${text}; font-size: 12px; }
+      .reword-save-profile-form .reword-form-actions { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; }
+      .reword-save-profile-btn { padding: 6px 14px; border-radius: 4px; background: #6366f1; color: white; border: none; font-size: 12px; cursor: pointer; }
+      .reword-save-profile-cancel { padding: 6px 14px; border-radius: 4px; background: none; border: 1px solid ${border}; color: ${muted}; font-size: 12px; cursor: pointer; }
     `;
   }
 
@@ -176,6 +187,7 @@ export class PopupCard {
         <button class="reword-cancel">Cancel <span class="reword-rewrite-shortcut">Esc</span></button>
       </div>
       <button class="reword-suppress-link">Don't flag this again</button>
+      ${this.buildSaveProfileSection()}
       ${this.buildHealthFooter()}
     `;
 
@@ -309,6 +321,50 @@ export class PopupCard {
     `;
   }
 
+  markContactSaved(platformId: string): void {
+    this.savedContactIds.add(platformId);
+  }
+
+  private buildSaveProfileSection(): string {
+    if (!this.recipientId || this.savedContactIds.has(this.recipientId)) return '';
+
+    // Derive a friendly display name from the platform ID
+    // e.g. 'gmail:jane@example.com' → 'jane', 'linkedin:john-doe' → 'john-doe'
+    const rawId = this.recipientId;
+    const colonIdx = rawId.indexOf(':');
+    const afterColon = colonIdx >= 0 ? rawId.slice(colonIdx + 1) : rawId;
+    const atIdx = afterColon.indexOf('@');
+    const defaultName = atIdx >= 0 ? afterColon.slice(0, atIdx) : afterColon;
+
+    return `
+      <button class="reword-save-profile-link">Save tone preferences for this contact</button>
+      <div class="reword-save-profile-form" style="display:none">
+        <label>Display Name</label>
+        <input type="text" class="reword-profile-display-name" value="${escapeHTML(defaultName)}" placeholder="e.g. Jane">
+        <label>Relationship Type</label>
+        <select class="reword-profile-relationship">
+          <option value="workplace" selected>Workplace</option>
+          <option value="romantic">Romantic</option>
+          <option value="family">Family</option>
+        </select>
+        <label>Sensitivity</label>
+        <select class="reword-profile-sensitivity">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+        <label>Tone Goal</label>
+        <input type="text" class="reword-profile-tone-goal" placeholder="e.g. more formal, match their energy">
+        <label>Cultural Context</label>
+        <input type="text" class="reword-profile-cultural-context" placeholder="e.g. prefers direct communication">
+        <div class="reword-form-actions">
+          <button class="reword-save-profile-cancel">Cancel</button>
+          <button class="reword-save-profile-btn">Save</button>
+        </div>
+      </div>
+    `;
+  }
+
   private buildDetailsSection(result: AnalysisResult): string {
     if (result.issues.length === 0) return '';
     const issuesList = result.issues.map((issue) => `<li>${escapeHTML(issue)}</li>`).join('');
@@ -368,6 +424,64 @@ export class PopupCard {
       const breakdown = this.element.querySelector('.reword-health-breakdown');
       breakdown?.classList.toggle('reword-expanded');
     });
+
+    // Save profile link — show/hide inline form
+    const saveProfileLink = this.element.querySelector<HTMLElement>('.reword-save-profile-link');
+    const saveProfileForm = this.element.querySelector<HTMLElement>('.reword-save-profile-form');
+    if (saveProfileLink && saveProfileForm) {
+      saveProfileLink.addEventListener('click', () => {
+        saveProfileForm.style.display = 'block';
+        saveProfileLink.style.display = 'none';
+      });
+
+      this.element.querySelector('.reword-save-profile-cancel')?.addEventListener('click', () => {
+        saveProfileForm.style.display = 'none';
+        saveProfileLink.style.display = 'block';
+      });
+
+      this.element
+        .querySelector('.reword-save-profile-btn')
+        ?.addEventListener('click', async () => {
+          const platformId = this.recipientId!;
+          const displayName =
+            this.element
+              .querySelector<HTMLInputElement>('.reword-profile-display-name')
+              ?.value.trim() || platformId;
+          const relationshipType = (this.element.querySelector<HTMLSelectElement>(
+            '.reword-profile-relationship',
+          )?.value ?? 'workplace') as ContactProfile['relationshipType'];
+          const sensitivity = (this.element.querySelector<HTMLSelectElement>(
+            '.reword-profile-sensitivity',
+          )?.value ?? 'medium') as ContactProfile['sensitivity'];
+          const toneGoal =
+            this.element
+              .querySelector<HTMLInputElement>('.reword-profile-tone-goal')
+              ?.value.trim() ?? '';
+          const culturalContext =
+            this.element
+              .querySelector<HTMLInputElement>('.reword-profile-cultural-context')
+              ?.value.trim() ?? '';
+
+          const profile: ContactProfile = {
+            displayName,
+            platformId,
+            relationshipType,
+            sensitivity,
+            toneGoal,
+            culturalContext,
+            createdAt: new Date().toISOString(),
+          };
+
+          try {
+            await chrome.runtime.sendMessage({ type: 'save-contact-profile', profile });
+            this.savedContactIds.add(platformId);
+            saveProfileForm.remove();
+            saveProfileLink.remove();
+          } catch (err) {
+            console.warn('[Reword] Failed to save contact profile:', err);
+          }
+        });
+    }
   }
 
   private bindKeyboardShortcuts(result: AnalysisResult): void {
