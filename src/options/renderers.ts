@@ -24,9 +24,11 @@ const LANGUAGE_OPTIONS: { value: string; label: string }[] = [
 
 /** HTML-escape a string to prevent XSS. */
 export function esc(text: string): string {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 export function renderProfiles(data: StoredData) {

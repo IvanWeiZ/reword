@@ -33,7 +33,12 @@ export class GmailAdapter implements PlatformAdapter {
   }
 
   getRecipientIdentifier(): string | null {
-    const email = document.querySelector<HTMLElement>('span[email]')?.getAttribute('email');
+    // Look for recipient emails in the compose form's To/CC/BCC fields
+    const toContainer = document.querySelector('.GS .GM, .aoD.hl, .iN');
+    const emailSpan =
+      toContainer?.querySelector<HTMLElement>('span[email]') ??
+      document.querySelector<HTMLElement>('.aoD span[email]');
+    const email = emailSpan?.getAttribute('email');
     return email ? 'gmail:' + email : null;
   }
 

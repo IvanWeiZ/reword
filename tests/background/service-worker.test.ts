@@ -48,7 +48,7 @@ vi.mock('../../src/background/ondevice-client', () => {
 });
 
 // Import handleMessage AFTER mocks are set up
-import { handleMessage } from '../../src/background/service-worker';
+import { handleMessage, _resetProviderState } from '../../src/background/service-worker';
 
 let mockStorage: ReturnType<typeof createMockChromeStorage>;
 
@@ -79,6 +79,7 @@ beforeEach(() => {
   mockConfigure.mockReset();
   mockCheckTone.mockReset().mockResolvedValue(null);
   mockProviderName.value = 'gemini';
+  _resetProviderState();
 });
 
 describe('handleMessage', () => {
@@ -402,8 +403,8 @@ describe('handleMessage', () => {
   describe('auto-configure provider from storage', () => {
     it('configures provider from stored API key when not yet configured (analyze)', async () => {
       await mockStorage.local.set({ reword: storedDataWithApiKey() });
-      // First call: not configured. After configure(), it becomes configured.
-      mockIsConfigured.mockReturnValueOnce(false).mockReturnValue(true);
+      // ensureProvider always calls configure when key changes, then isConfigured returns true
+      mockIsConfigured.mockReturnValue(true);
       mockCheckTone.mockResolvedValue(null);
       mockAnalyze.mockResolvedValue(MOCK_CLEAN_RESULT);
 
@@ -421,7 +422,7 @@ describe('handleMessage', () => {
 
     it('configures provider from stored API key when not yet configured (analyze-incoming)', async () => {
       await mockStorage.local.set({ reword: storedDataWithApiKey() });
-      mockIsConfigured.mockReturnValueOnce(false).mockReturnValue(true);
+      mockIsConfigured.mockReturnValue(true);
       const incomingResult: IncomingAnalysis = {
         riskLevel: 'medium',
         issues: ['dismissive'],

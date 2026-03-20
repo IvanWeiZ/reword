@@ -177,8 +177,11 @@ describe('GmailAdapter', () => {
   });
 
   describe('getRecipientIdentifier', () => {
-    it('returns prefixed email when span[email] element is present', () => {
-      document.body.innerHTML += `<span email="alice@example.com">Alice</span>`;
+    it('returns prefixed email when span[email] is in compose To field', () => {
+      const container = document.createElement('div');
+      container.className = 'aoD';
+      container.innerHTML = `<span email="alice@example.com">Alice</span>`;
+      document.body.appendChild(container);
       expect(adapter.getRecipientIdentifier()).toBe('gmail:alice@example.com');
     });
 

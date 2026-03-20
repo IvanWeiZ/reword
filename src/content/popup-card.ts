@@ -442,7 +442,8 @@ export class PopupCard {
       this.element
         .querySelector('.reword-save-profile-btn')
         ?.addEventListener('click', async () => {
-          const platformId = this.recipientId!;
+          const platformId = this.recipientId;
+          if (!platformId || this.savedContactIds.has(platformId)) return;
           const displayName =
             this.element
               .querySelector<HTMLInputElement>('.reword-profile-display-name')

@@ -11,7 +11,29 @@ import {
 import type { MessageToBackground, MessageFromBackground, StoredData } from '../shared/types';
 
 let provider: AIProvider | null = null;
+let providerApiKey = '';
 const ondevice = new OnDeviceClient();
+
+/** Reset provider state — exposed for testing only. */
+export function _resetProviderState(): void {
+  provider = null;
+  providerApiKey = '';
+}
+
+/** Ensure the module-level provider matches the current settings. */
+function ensureProvider(data: StoredData): AIProvider {
+  const name = data.settings.aiProvider;
+  const apiKey = data.settings.providerApiKeys[name] ?? '';
+  if (!provider || provider.name !== name) {
+    provider = createProvider(name);
+    providerApiKey = '';
+  }
+  if (apiKey && apiKey !== providerApiKey) {
+    provider.configure(apiKey);
+    providerApiKey = apiKey;
+  }
+  return provider;
+}
 
 /** Returns the ISO date string (YYYY-MM-DD) of the Monday starting the current week. */
 export function getMondayOfWeek(date: Date = new Date()): string {
@@ -192,22 +214,18 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
       // Feature #14: Two-way analysis
       try {
         const data = await loadStoredData();
-        const providerName = data.settings.aiProvider;
-        const apiKey = data.settings.providerApiKeys[providerName] ?? '';
-        if (!provider || provider.name !== providerName) {
-          provider = createProvider(providerName);
-        }
-        if (!provider.isConfigured() && apiKey) {
-          provider.configure(apiKey);
-        }
-        if (!provider.isConfigured()) {
-          return { type: 'analysis-error', error: 'Gemini API key not configured' };
+        const activeProvider = ensureProvider(data);
+        if (!activeProvider.isConfigured()) {
+          return {
+            type: 'analysis-error',
+            error: `${data.settings.aiProvider.charAt(0).toUpperCase() + data.settings.aiProvider.slice(1)} API key not configured`,
+          };
         }
 
         data.stats.monthlyApiCalls++;
         await saveStoredData(data);
 
-        const result = await provider.analyzeIncoming(message.text, message.context);
+        const result = await activeProvider.analyzeIncoming(message.text, message.context);
         return { type: 'incoming-result', result };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -219,15 +237,7 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
     case 'analyze': {
       try {
         const data = await loadStoredData();
-
-        const providerName = data.settings.aiProvider;
-        const apiKey = data.settings.providerApiKeys[providerName] ?? '';
-        if (!provider || provider.name !== providerName) {
-          provider = createProvider(providerName);
-        }
-        if (!provider.isConfigured() && apiKey) {
-          provider.configure(apiKey);
-        }
+        const activeProvider = ensureProvider(data);
 
         const contactProfile = message.recipientId
           ? data.contactProfiles[message.recipientId]
@@ -253,8 +263,11 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
         }
 
         // Tier 2: AI provider
-        if (!provider.isConfigured()) {
-          return { type: 'analysis-error', error: 'Gemini API key not configured' };
+        if (!activeProvider.isConfigured()) {
+          return {
+            type: 'analysis-error',
+            error: `${data.settings.aiProvider.charAt(0).toUpperCase() + data.settings.aiProvider.slice(1)} API key not configured`,
+          };
         }
 
         await checkWeeklyReset(data);
@@ -262,7 +275,7 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
         data.stats.monthlyApiCalls++;
         data.weeklyStats.analyzed++;
 
-        const result = await provider.analyze(
+        const result = await activeProvider.analyze(
           message.text,
           message.relationshipType,
           message.sensitivity,

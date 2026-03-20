@@ -38,11 +38,13 @@ export class ClaudeProvider implements AIProvider {
   ): Promise<AnalysisResult> {
     if (!this.client) throw new Error('Claude client not configured');
 
-    const prompt = buildAnalysisPrompt(message, relationshipType, sensitivity, threadContext, {
-      personas: options?.personas,
-      contactProfile: options?.contactProfile,
-      preferredLanguage: options?.preferredLanguage,
-    });
+    const prompt = buildAnalysisPrompt(
+      message,
+      relationshipType,
+      sensitivity,
+      threadContext,
+      options,
+    );
 
     const stream = await this.client.messages.stream({
       model: MODEL,

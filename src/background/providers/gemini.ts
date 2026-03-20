@@ -46,11 +46,13 @@ export class GeminiProvider implements AIProvider {
       },
     });
 
-    const prompt = buildAnalysisPrompt(message, relationshipType, sensitivity, threadContext, {
-      personas: options?.personas,
-      contactProfile: options?.contactProfile,
-      preferredLanguage: options?.preferredLanguage,
-    });
+    const prompt = buildAnalysisPrompt(
+      message,
+      relationshipType,
+      sensitivity,
+      threadContext,
+      options,
+    );
 
     const streamResult = await model.generateContentStream({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],

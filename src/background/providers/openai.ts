@@ -38,11 +38,13 @@ export class OpenAIProvider implements AIProvider {
   ): Promise<AnalysisResult> {
     if (!this.client) throw new Error('OpenAI client not configured');
 
-    const prompt = buildAnalysisPrompt(message, relationshipType, sensitivity, threadContext, {
-      personas: options?.personas,
-      contactProfile: options?.contactProfile,
-      preferredLanguage: options?.preferredLanguage,
-    });
+    const prompt = buildAnalysisPrompt(
+      message,
+      relationshipType,
+      sensitivity,
+      threadContext,
+      options,
+    );
 
     const stream = await this.client.chat.completions.create({
       model: MODEL,
