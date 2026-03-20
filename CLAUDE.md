@@ -16,6 +16,7 @@ npm run lint         # Run ESLint on src/ and tests/
 npm run lint:fix     # Run ESLint with auto-fix
 npm run format       # Format code with Prettier
 npm run format:check # Check formatting without writing
+npm run check        # Run all checks: format, lint, test, build
 ```
 
 ## Architecture
@@ -60,13 +61,13 @@ Each platform (Gmail, LinkedIn, Twitter) has an adapter in `src/adapters/` imple
 
 ## Key Constants (`src/shared/constants.ts`)
 
-| Constant | Value | Purpose |
-|---|---|---|
-| `DEBOUNCE_MS` | 2000 | Wait after user stops typing before analyzing |
-| `MIN_MESSAGE_LENGTH` | 10 | Minimum chars to trigger analysis |
-| `HEURISTIC_THRESHOLD` | 0.3 | Local heuristic score threshold (0-1) |
-| `ONDEVICE_CONFIDENCE_THRESHOLD` | 0.8 | On-device AI confidence cutoff |
-| `API_TIMEOUT_MS` | 5000 | Gemini API call timeout |
+| Constant                        | Value | Purpose                                       |
+| ------------------------------- | ----- | --------------------------------------------- |
+| `DEBOUNCE_MS`                   | 2000  | Wait after user stops typing before analyzing |
+| `MIN_MESSAGE_LENGTH`            | 10    | Minimum chars to trigger analysis             |
+| `HEURISTIC_THRESHOLD`           | 0.3   | Local heuristic score threshold (0-1)         |
+| `ONDEVICE_CONFIDENCE_THRESHOLD` | 0.8   | On-device AI confidence cutoff                |
+| `API_TIMEOUT_MS`                | 5000  | Gemini API call timeout                       |
 
 ## Testing
 
@@ -79,6 +80,7 @@ Each platform (Gmail, LinkedIn, Twitter) has an adapter in `src/adapters/` imple
 ## Build Output
 
 Vite produces three bundles in `dist/`:
+
 - `service-worker.js` — Background service worker
 - `content.js` — Content script injected into pages
 - `options.js` — Options page script
