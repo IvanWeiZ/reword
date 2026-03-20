@@ -32,6 +32,13 @@ export class TwitterAdapter implements PlatformAdapter {
     return input !== null && sendBtn !== null;
   }
 
+  getRecipientIdentifier(): string | null {
+    const name = document
+      .querySelector<HTMLElement>('[data-testid="conversation-header"] span')
+      ?.textContent?.trim();
+    return name ? 'twitter:' + name : null;
+  }
+
   scrapeThreadContext(): ThreadMessage[] {
     const messages: ThreadMessage[] = [];
     const messageEls = document.querySelectorAll('[data-testid="messageEntry"]');

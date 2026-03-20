@@ -146,6 +146,23 @@ describe('LinkedInAdapter', () => {
     expect(context[1]).toEqual({ sender: 'self', text: 'From me' });
   });
 
+  describe('getRecipientIdentifier', () => {
+    it('returns prefixed name when .msg-entity-lockup__entity-title is present', () => {
+      document.body.innerHTML += `<div class="msg-entity-lockup__entity-title">Bob Smith</div>`;
+      expect(adapter.getRecipientIdentifier()).toBe('linkedin:Bob Smith');
+    });
+
+    it('returns null when .msg-entity-lockup__entity-title is missing', () => {
+      document.body.innerHTML = '<div>No recipient</div>';
+      expect(adapter.getRecipientIdentifier()).toBeNull();
+    });
+
+    it('returns null when entity title element has empty text', () => {
+      document.body.innerHTML += `<div class="msg-entity-lockup__entity-title">   </div>`;
+      expect(adapter.getRecipientIdentifier()).toBeNull();
+    });
+  });
+
   describe('checkHealth', () => {
     it('returns true when input and actions row both exist', () => {
       expect(adapter.checkHealth()).toBe(true);

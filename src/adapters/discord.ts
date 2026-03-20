@@ -31,6 +31,11 @@ export class DiscordAdapter implements PlatformAdapter {
     return input !== null;
   }
 
+  getRecipientIdentifier(): string | null {
+    const name = document.querySelector<HTMLElement>('h3[class*="channel-"]')?.textContent?.trim();
+    return name ? 'discord:' + name : null;
+  }
+
   scrapeThreadContext(): ThreadMessage[] {
     const messages: ThreadMessage[] = [];
     const messageEls = document.querySelectorAll('[id^="chat-messages-"]');

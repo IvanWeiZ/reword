@@ -82,6 +82,13 @@ export class LinkedInAdapter implements PlatformAdapter {
     return input !== null && actionsRow !== null;
   }
 
+  getRecipientIdentifier(): string | null {
+    const name = document
+      .querySelector<HTMLElement>('.msg-entity-lockup__entity-title')
+      ?.textContent?.trim();
+    return name ? 'linkedin:' + name : null;
+  }
+
   scrapeThreadContext(): ThreadMessage[] {
     const messages: ThreadMessage[] = [];
     const messageEls = document.querySelectorAll('.msg-s-event-listitem');

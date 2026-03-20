@@ -39,6 +39,11 @@ export class WhatsAppAdapter implements PlatformAdapter {
     return input !== null;
   }
 
+  getRecipientIdentifier(): string | null {
+    const name = document.querySelector<HTMLElement>('header [title]')?.getAttribute('title');
+    return name ? 'whatsapp:' + name : null;
+  }
+
   scrapeThreadContext(): ThreadMessage[] {
     const messages: ThreadMessage[] = [];
     const messageEls = document.querySelectorAll('[data-testid="msg-container"]');

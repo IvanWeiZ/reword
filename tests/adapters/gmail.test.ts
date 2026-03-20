@@ -176,6 +176,18 @@ describe('GmailAdapter', () => {
     expect(context[2].text).toBe('Third message');
   });
 
+  describe('getRecipientIdentifier', () => {
+    it('returns prefixed email when span[email] element is present', () => {
+      document.body.innerHTML += `<span email="alice@example.com">Alice</span>`;
+      expect(adapter.getRecipientIdentifier()).toBe('gmail:alice@example.com');
+    });
+
+    it('returns null when span[email] element is missing', () => {
+      document.body.innerHTML = '<div>No recipient</div>';
+      expect(adapter.getRecipientIdentifier()).toBeNull();
+    });
+  });
+
   describe('checkHealth', () => {
     it('returns true when both input and send button exist', () => {
       expect(adapter.checkHealth()).toBe(true);

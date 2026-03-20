@@ -32,6 +32,11 @@ export class GmailAdapter implements PlatformAdapter {
     return input !== null && sendBtn !== null;
   }
 
+  getRecipientIdentifier(): string | null {
+    const email = document.querySelector<HTMLElement>('span[email]')?.getAttribute('email');
+    return email ? 'gmail:' + email : null;
+  }
+
   scrapeThreadContext(): ThreadMessage[] {
     const messages: ThreadMessage[] = [];
     const messageEls = document.querySelectorAll('.a3s.aiL');

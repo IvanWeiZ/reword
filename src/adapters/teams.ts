@@ -41,6 +41,13 @@ export class TeamsAdapter implements PlatformAdapter {
     return true;
   }
 
+  getRecipientIdentifier(): string | null {
+    const name = document
+      .querySelector<HTMLElement>('[data-tid="chat-header-title"]')
+      ?.textContent?.trim();
+    return name ? 'teams:' + name : null;
+  }
+
   scrapeThreadContext(): ThreadMessage[] {
     const messages: ThreadMessage[] = [];
     const messageEls = document.querySelectorAll('[data-tid="chat-pane-message"]');

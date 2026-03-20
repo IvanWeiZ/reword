@@ -30,6 +30,11 @@ export class OutlookAdapter implements PlatformAdapter {
     return true;
   }
 
+  getRecipientIdentifier(): string | null {
+    const nameEl = document.querySelector<HTMLElement>('[class*="wellItemName"], .CesyA');
+    return nameEl?.textContent?.trim() ? 'outlook:' + nameEl.textContent.trim() : null;
+  }
+
   scrapeThreadContext(): ThreadMessage[] {
     const messages: ThreadMessage[] = [];
     // Outlook Web renders conversation messages in divs with role="document" or within .ItemContent

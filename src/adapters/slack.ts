@@ -34,6 +34,13 @@ export class SlackAdapter implements PlatformAdapter {
     return input !== null;
   }
 
+  getRecipientIdentifier(): string | null {
+    const name = document
+      .querySelector<HTMLElement>('.p-conversation_header__name_text, .c-message_kit__sender')
+      ?.textContent?.trim();
+    return name ? 'slack:' + name : null;
+  }
+
   scrapeThreadContext(): ThreadMessage[] {
     const messages: ThreadMessage[] = [];
     const messageEls = document.querySelectorAll('[data-qa="virtual-list-item"]');

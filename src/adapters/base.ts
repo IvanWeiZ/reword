@@ -98,6 +98,10 @@ export class GenericFallbackAdapter implements PlatformAdapter {
     return [];
   }
 
+  getRecipientIdentifier(): string | null {
+    return null;
+  }
+
   checkHealth(): boolean {
     return this.findInputField() !== null;
   }
