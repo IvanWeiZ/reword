@@ -11,6 +11,9 @@ test-results/
 .vscode/
 .idea/
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # Environment
 .env
 .env.*
