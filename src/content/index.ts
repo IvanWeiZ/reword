@@ -9,8 +9,14 @@ import { scoreMessage } from './heuristic-scorer';
 import { PopupCard } from './popup-card';
 import { normalizeSnippet, renderDiffHTML } from './helpers';
 import {
-  GmailAdapter, LinkedInAdapter, TwitterAdapter, SlackAdapter,
-  DiscordAdapter, OutlookAdapter, TeamsAdapter, WhatsAppAdapter,
+  GmailAdapter,
+  LinkedInAdapter,
+  TwitterAdapter,
+  SlackAdapter,
+  DiscordAdapter,
+  OutlookAdapter,
+  TeamsAdapter,
+  WhatsAppAdapter,
   GenericFallbackAdapter,
 } from '../adapters';
 
@@ -85,12 +91,16 @@ function createWarningBanner(): {
       });
     },
     showAnalysis(result: AnalysisResult, originalText: string) {
-      const issueList = result.issues.map(i => `<li>${i}</li>`).join('');
-      const rewriteButtons = result.rewrites.map((r, i) => `
+      const issueList = result.issues.map((i) => `<li>${i}</li>`).join('');
+      const rewriteButtons = result.rewrites
+        .map(
+          (r, i) => `
         <button class="reword-use-rewrite" data-index="${i}"
           style="background:white;color:#333;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;text-align:left;margin:4px 0;width:100%;">
           <strong>${r.tone}:</strong> ${renderDiffHTML(originalText, r.text)}
-        </button>`).join('');
+        </button>`,
+        )
+        .join('');
 
       content.innerHTML = `
         <div style="display:flex;align-items:flex-start;gap:12px;">
@@ -99,10 +109,14 @@ function createWarningBanner(): {
             <div style="margin-bottom:8px;">
               <strong>Tone issue detected:</strong> ${result.explanation || issueList}
             </div>
-            ${result.rewrites.length > 0 ? `
+            ${
+              result.rewrites.length > 0
+                ? `
               <div style="margin-bottom:8px;font-size:13px;opacity:0.9;">Click a rewrite to replace your message:</div>
               <div>${rewriteButtons}</div>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;">
             <button id="reword-send-anyway" style="background:rgba(255,255,255,0.2);border:none;color:white;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px;">Send anyway</button>
@@ -194,7 +208,7 @@ function init(): void {
         banner.showAnalysis(response.result, text);
 
         // Wire up rewrite buttons
-        document.querySelectorAll('.reword-use-rewrite').forEach(btn => {
+        document.querySelectorAll('.reword-use-rewrite').forEach((btn) => {
           btn.addEventListener('click', () => {
             const idx = parseInt(btn.getAttribute('data-index') ?? '0');
             const rewrite = response.result.rewrites[idx];
@@ -268,7 +282,8 @@ function init(): void {
 
   // Poll for input field
   setInterval(() => {
-    const input = adapter.findInputField() ??
+    const input =
+      adapter.findInputField() ??
       document.querySelector<HTMLElement>('[contenteditable="true"][role="textbox"]') ??
       document.querySelector<HTMLElement>('[contenteditable="true"]');
     if (input && input !== cachedInput) {
@@ -277,13 +292,20 @@ function init(): void {
   }, 2000);
 
   // Also detect via focus
-  document.addEventListener('focusin', (e) => {
-    const t = e.target as HTMLElement;
-    if (t?.isContentEditable || t?.getAttribute?.('contenteditable') === 'true' ||
-        t?.getAttribute?.('role') === 'textbox') {
-      attachInputListener(t);
-    }
-  }, true);
+  document.addEventListener(
+    'focusin',
+    (e) => {
+      const t = e.target as HTMLElement;
+      if (
+        t?.isContentEditable ||
+        t?.getAttribute?.('contenteditable') === 'true' ||
+        t?.getAttribute?.('role') === 'textbox'
+      ) {
+        attachInputListener(t);
+      }
+    },
+    true,
+  );
 
   // Listen for blocked Enter from shadow-pierce.js (MAIN world)
   window.addEventListener('message', (e) => {

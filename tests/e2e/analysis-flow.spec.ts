@@ -60,10 +60,9 @@ test.describe('full analysis flow', () => {
     const input = page.locator('.msg-form__contenteditable');
     await input.click();
     await input.fill('');
-    await input.pressSequentially(
-      'per my last email, I already explained this to you',
-      { delay: 30 },
-    );
+    await input.pressSequentially('per my last email, I already explained this to you', {
+      delay: 30,
+    });
 
     // Wait for debounce + analysis trigger
     await page.waitForTimeout(4000);
@@ -103,10 +102,9 @@ test.describe('full analysis flow', () => {
     const input = page.locator('.msg-form__contenteditable');
     await input.click();
     await input.fill('');
-    await input.pressSequentially(
-      'whatever, I guess that works. Thanks for nothing.',
-      { delay: 30 },
-    );
+    await input.pressSequentially('whatever, I guess that works. Thanks for nothing.', {
+      delay: 30,
+    });
 
     // Wait for debounce + analysis
     await page.waitForTimeout(4000);

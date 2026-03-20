@@ -13,10 +13,7 @@ export type { PlatformAdapter };
  */
 /** Check whether an element is contentEditable. */
 function isContentEditable(element: HTMLElement): boolean {
-  return (
-    element.isContentEditable === true ||
-    element.getAttribute('contenteditable') === 'true'
-  );
+  return element.isContentEditable === true || element.getAttribute('contenteditable') === 'true';
 }
 
 export function writeBackToElement(element: HTMLElement, text: string): void {

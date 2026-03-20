@@ -74,7 +74,8 @@ export class ConversationHealthTracker {
 
   /** Compute the health score for a thread. */
   private computeScore(data: ThreadHealthData): number {
-    const score = MAX_SCORE - data.totalFlagged * FLAG_PENALTY + data.rewritesAccepted * REWRITE_RECOVERY;
+    const score =
+      MAX_SCORE - data.totalFlagged * FLAG_PENALTY + data.rewritesAccepted * REWRITE_RECOVERY;
     return clampScore(score);
   }
 

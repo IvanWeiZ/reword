@@ -45,7 +45,9 @@ export class TeamsAdapter implements PlatformAdapter {
     const messages: ThreadMessage[] = [];
     const messageEls = document.querySelectorAll('[data-tid="chat-pane-message"]');
     for (const el of messageEls) {
-      const body = el.querySelector<HTMLElement>('.ui-chat__message__content, [data-tid="message-body"]');
+      const body = el.querySelector<HTMLElement>(
+        '.ui-chat__message__content, [data-tid="message-body"]',
+      );
       const text = body?.textContent?.trim();
       if (!text) continue;
       const senderEl = el.querySelector<HTMLElement>(

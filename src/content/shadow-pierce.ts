@@ -18,19 +18,26 @@ const MIN_LENGTH = 3;
 
 const HARSH_WORD_RE = /\b(stupid|idiot|useless|pathetic|incompetent|worthless|dumb)\b/i;
 const MILD_WORD_RE = /\b(hate|disgusting|terrible|awful|annoying|ridiculous)\b/i;
-const PROFANITY_RE = /\b(fuck|fucking|fucked|shit|shitty|bullshit|ass|asshole|bitch|bitching|dumbass|dumb\s+ass|jackass|moron|imbecile|stfu|wtf|gtfo|crap)\b/i;
+const PROFANITY_RE =
+  /\b(fuck|fucking|fucked|shit|shitty|bullshit|ass|asshole|bitch|bitching|dumbass|dumb\s+ass|jackass|moron|imbecile|stfu|wtf|gtfo|crap)\b/i;
 const PROFANITY_DIRECTED_RE = /\b(fuck|screw|damn|piss)\s?(you|off|this|that|it|me)\b/i;
-const DIRECTED_INSULT_RE = /\byou\s+(are|r)\s+(\w+\s+)?(stupid|dumb|useless|pathetic|terrible|awful|incompetent|worthless|an?\s+idiot|an?\s+moron)\b/i;
+const DIRECTED_INSULT_RE =
+  /\byou\s+(are|r)\s+(\w+\s+)?(stupid|dumb|useless|pathetic|terrible|awful|incompetent|worthless|an?\s+idiot|an?\s+moron)\b/i;
 const SARCASM_RE = /\boh\s+(great|wonderful|fantastic|perfect)\b/i;
 const SARCASM2_RE = /\bsure,?\s*(no problem at all|whatever you say)\b/i;
 const EXCESSIVE_PUNCT_RE = /[!?]{2,}/;
-const NEGATIVE_EMOJI_RE = /[\u{1F644}\u{1F612}\u{1F620}\u{1F621}\u{1F624}\u{1F92C}\u{1F4A9}\u{1F595}\u{1F44E}\u{1F926}\u{1F921}]/u;
-const SARCASTIC_EMOJI_RE = /\b(fine|whatever|sure|okay|ok|great|thanks|right)\b[.!,]?\s*[\u{1F642}\u{1F60A}\u{1F643}\u{263A}]/iu;
+const NEGATIVE_EMOJI_RE =
+  /[\u{1F644}\u{1F612}\u{1F620}\u{1F621}\u{1F624}\u{1F92C}\u{1F4A9}\u{1F595}\u{1F44E}\u{1F926}\u{1F921}]/u;
+const SARCASTIC_EMOJI_RE =
+  /\b(fine|whatever|sure|okay|ok|great|thanks|right)\b[.!,]?\s*[\u{1F642}\u{1F60A}\u{1F643}\u{263A}]/iu;
 // Pre-compiled PA patterns — hoisted to module scope to avoid per-call allocation
 const PA_PATTERNS: [RegExp, number][] = [
-  [/\bfine\.\s*$/i, 0.35], [/\bwhatever\b/i, 0.35],
-  [/\bper my last email\b/i, 0.4], [/\bas I already mentioned\b/i, 0.35],
-  [/\bas previously stated\b/i, 0.35], [/\bthanks for nothing\b/i, 0.4],
+  [/\bfine\.\s*$/i, 0.35],
+  [/\bwhatever\b/i, 0.35],
+  [/\bper my last email\b/i, 0.4],
+  [/\bas I already mentioned\b/i, 0.35],
+  [/\bas previously stated\b/i, 0.35],
+  [/\bthanks for nothing\b/i, 0.4],
   [/\bas I already explained\b/i, 0.35],
 ];
 
@@ -72,7 +79,7 @@ let shield: HTMLElement | null = null;
 function getEditableText(): string {
   if (!cachedEditable || !document.contains(cachedEditable)) {
     cachedEditable = document.querySelector<HTMLElement>(
-      '[contenteditable="true"][role="textbox"], [contenteditable="true"]'
+      '[contenteditable="true"][role="textbox"], [contenteditable="true"]',
     );
   }
   if (!cachedEditable) return '';
@@ -81,12 +88,15 @@ function getEditableText(): string {
 
 // Send button selectors
 const SEND_SELECTORS = [
-  '.msg-form__send-button', '.msg-form__send-btn',
+  '.msg-form__send-button',
+  '.msg-form__send-btn',
   'button[type="submit"]',
-  '[data-tooltip*="Send"]', '.T-I.aoO',
+  '[data-tooltip*="Send"]',
+  '.T-I.aoO',
   '[data-testid="dmComposerSendButton"]',
   '[data-qa="texty_send_button"]',
-  'button[aria-label*="Send"]', 'button[aria-label*="send"]',
+  'button[aria-label*="Send"]',
+  'button[aria-label*="send"]',
 ];
 const SEND_BUTTON_SELECTOR = SEND_SELECTORS.join(',');
 
@@ -95,7 +105,9 @@ function showShield(): void {
   if (shield && document.contains(shield)) return;
 
   // Find the compose container to cover
-  const composeContainer = cachedEditable?.closest('.msg-form, .msg-form__msg-content-container, [data-testid="messageEntry"], .channelTextArea_xyz, .nH') as HTMLElement | null;
+  const composeContainer = cachedEditable?.closest(
+    '.msg-form, .msg-form__msg-content-container, [data-testid="messageEntry"], .channelTextArea_xyz, .nH',
+  ) as HTMLElement | null;
   const target = composeContainer ?? cachedEditable?.parentElement;
   if (!target) return;
 
@@ -119,9 +131,30 @@ function showShield(): void {
   target.appendChild(shield);
 
   // Shield clicks — prevent anything from reaching the compose area
-  shield.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); }, true);
-  shield.addEventListener('mousedown', (e) => { e.stopPropagation(); e.preventDefault(); }, true);
-  shield.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); }, true);
+  shield.addEventListener(
+    'click',
+    (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+    },
+    true,
+  );
+  shield.addEventListener(
+    'mousedown',
+    (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+    },
+    true,
+  );
+  shield.addEventListener(
+    'pointerdown',
+    (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+    },
+    true,
+  );
 }
 
 function hideShield(): void {
@@ -196,12 +229,20 @@ function createWarningBar(): HTMLElement {
     unblock();
     // Re-trigger send
     if (cachedEditable) {
-      cachedEditable.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'Enter', code: 'Enter', keyCode: 13, which: 13,
-        bubbles: true, cancelable: true,
-      }));
+      cachedEditable.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Enter',
+          code: 'Enter',
+          keyCode: 13,
+          which: 13,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
     }
-    setTimeout(() => { sendAnyway = false; }, 500);
+    setTimeout(() => {
+      sendAnyway = false;
+    }, 500);
   });
 
   return bar;
@@ -211,9 +252,8 @@ function block(score: number): void {
   if (!warningBar) warningBar = createWarningBar();
   const detail = warningBar.querySelector('#reword-bar-detail');
   if (detail) {
-    detail.textContent = score >= 0.6
-      ? ' Consider rewriting before sending.'
-      : ' Take a moment to review your tone.';
+    detail.textContent =
+      score >= 0.6 ? ' Consider rewriting before sending.' : ' Take a moment to review your tone.';
   }
   warningBar.style.display = 'block';
   disableSendButtons();
@@ -249,31 +289,49 @@ function checkCurrentText(): void {
 }
 
 // Listen on EVERY possible text-change event for maximum coverage
-document.addEventListener('input', () => { checkCurrentText(); }, true);
-document.addEventListener('keyup', (e) => {
-  if (e.key === 'Shift') return;
-  checkCurrentText();
-}, true);
+document.addEventListener(
+  'input',
+  () => {
+    checkCurrentText();
+  },
+  true,
+);
+document.addEventListener(
+  'keyup',
+  (e) => {
+    if (e.key === 'Shift') return;
+    checkCurrentText();
+  },
+  true,
+);
 // selectionchange fires reliably on contenteditable even when input doesn't
-document.addEventListener('selectionchange', () => { checkCurrentText(); });
+document.addEventListener('selectionchange', () => {
+  checkCurrentText();
+});
 // Also poll the editable text on a fast interval as ultimate fallback
-setInterval(() => { checkCurrentText(); }, 500);
+setInterval(() => {
+  checkCurrentText();
+}, 500);
 
 // 8. Cache editable elements (keep polling — SPAs recreate compose boxes)
 setInterval(() => {
   if (cachedEditable && document.contains(cachedEditable)) return;
   cachedEditable = document.querySelector<HTMLElement>(
-    '[contenteditable="true"][role="textbox"], [contenteditable="true"]'
+    '[contenteditable="true"][role="textbox"], [contenteditable="true"]',
   );
 }, 1000);
 
-document.addEventListener('focusin', (e) => {
-  const t = e.target as HTMLElement;
-  if (t?.isContentEditable || t?.getAttribute?.('contenteditable') === 'true') {
-    cachedEditable = t;
-    checkCurrentText();
-  }
-}, true);
+document.addEventListener(
+  'focusin',
+  (e) => {
+    const t = e.target as HTMLElement;
+    if (t?.isContentEditable || t?.getAttribute?.('contenteditable') === 'true') {
+      cachedEditable = t;
+      checkCurrentText();
+    }
+  },
+  true,
+);
 
 // Listen for unblock signal from content script (isolated world) after rewrite accepted
 window.addEventListener('message', (e) => {
@@ -295,7 +353,9 @@ function findEditable(eventTarget?: EventTarget | null): HTMLElement | null {
     let el = document.activeElement as HTMLElement | null;
     while (el) {
       if (el.isContentEditable || el.getAttribute?.('contenteditable') === 'true') {
-        editable = el; cachedEditable = el; break;
+        editable = el;
+        cachedEditable = el;
+        break;
       }
       el = el.parentElement;
     }
@@ -304,7 +364,9 @@ function findEditable(eventTarget?: EventTarget | null): HTMLElement | null {
     let el = eventTarget as HTMLElement | null;
     while (el) {
       if (el.isContentEditable || el.getAttribute?.('contenteditable') === 'true') {
-        editable = el; cachedEditable = el; break;
+        editable = el;
+        cachedEditable = el;
+        break;
       }
       el = el.parentElement;
     }
@@ -313,46 +375,53 @@ function findEditable(eventTarget?: EventTarget | null): HTMLElement | null {
 }
 
 // 9. Block Enter key (belt) — MOST CRITICAL handler
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' || e.shiftKey || sendAnyway) return;
+document.addEventListener(
+  'keydown',
+  (e) => {
+    if (e.key !== 'Enter' || e.shiftKey || sendAnyway) return;
 
-  // Try every possible way to find the editable and its text
-  let text = '';
-  const editable = findEditable(e.target);
-  if (editable) {
-    text = editable.textContent?.trim() ?? '';
-  }
-  // Fallback: try activeElement directly
-  if (!text) {
-    const active = document.activeElement as HTMLElement | null;
-    if (active?.isContentEditable) {
-      text = active.textContent?.trim() ?? '';
-      cachedEditable = active;
+    // Try every possible way to find the editable and its text
+    let text = '';
+    const editable = findEditable(e.target);
+    if (editable) {
+      text = editable.textContent?.trim() ?? '';
     }
-  }
-  // Fallback: try event target
-  if (!text) {
-    const target = e.target as HTMLElement | null;
-    if (target?.isContentEditable) {
-      text = target.textContent?.trim() ?? '';
-      cachedEditable = target;
+    // Fallback: try activeElement directly
+    if (!text) {
+      const active = document.activeElement as HTMLElement | null;
+      if (active?.isContentEditable) {
+        text = active.textContent?.trim() ?? '';
+        cachedEditable = active;
+      }
     }
-  }
+    // Fallback: try event target
+    if (!text) {
+      const target = e.target as HTMLElement | null;
+      if (target?.isContentEditable) {
+        text = target.textContent?.trim() ?? '';
+        cachedEditable = target;
+      }
+    }
 
-  if (text.length < MIN_LENGTH) return;
+    if (text.length < MIN_LENGTH) return;
 
-  // ALWAYS recompute score fresh on Enter — don't trust cache
-  const score = quickScore(text);
-  if (score < HEURISTIC_THRESHOLD) return;
+    // ALWAYS recompute score fresh on Enter — don't trust cache
+    const score = quickScore(text);
+    if (score < HEURISTIC_THRESHOLD) return;
 
-  e.preventDefault();
-  e.stopPropagation();
-  e.stopImmediatePropagation();
-  block(score);
-  window.postMessage({ type: 'reword-send-intercept', text }, '*');
-  console.log('%c[Reword MAIN] BLOCKED Enter (score: ' + score.toFixed(2) + ')',
-    'color: red; font-size: 14px', text.slice(0, 60));
-}, true);
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    block(score);
+    window.postMessage({ type: 'reword-send-intercept', text }, '*');
+    console.log(
+      '%c[Reword MAIN] BLOCKED Enter (score: ' + score.toFixed(2) + ')',
+      'color: red; font-size: 14px',
+      text.slice(0, 60),
+    );
+  },
+  true,
+);
 
 // 10. Block Send button clicks/mousedown/pointerdown (suspenders)
 function handleSendInteraction(e: Event): void {
@@ -363,7 +432,7 @@ function handleSendInteraction(e: Event): void {
   const text = getEditableText();
   if (text.length < MIN_LENGTH) return;
 
-  const score = (text === lastCheckedText) ? lastScore : quickScore(text);
+  const score = text === lastCheckedText ? lastScore : quickScore(text);
   if (score < HEURISTIC_THRESHOLD) return;
 
   e.preventDefault();
@@ -371,7 +440,11 @@ function handleSendInteraction(e: Event): void {
   e.stopImmediatePropagation();
   block(score);
   window.postMessage({ type: 'reword-send-intercept', text }, '*');
-  console.log('%c[Reword MAIN] BLOCKED Send ' + e.type, 'color: red; font-size: 14px', text.slice(0, 60));
+  console.log(
+    '%c[Reword MAIN] BLOCKED Send ' + e.type,
+    'color: red; font-size: 14px',
+    text.slice(0, 60),
+  );
 }
 
 document.addEventListener('click', handleSendInteraction, true);

@@ -133,16 +133,17 @@ export class PopupCard {
     this.cooldownTracker.recordAnalysis();
     const dotColor = RISK_COLORS[result.riskLevel];
 
-    const shouldShowCooldown = !this.cooldownDismissed && this.cooldownTracker.shouldSuggestCooldown();
+    const shouldShowCooldown =
+      !this.cooldownDismissed && this.cooldownTracker.shouldSuggestCooldown();
     if (shouldShowCooldown) {
       this.cooldownTracker.markShown();
     }
     const cooldownBanner = shouldShowCooldown
-        ? `<div class="reword-cooldown-banner">
+      ? `<div class="reword-cooldown-banner">
             <span>You're on a roll — want to review your recent messages before continuing?</span>
             <button class="reword-cooldown-dismiss">Continue</button>
           </div>`
-        : '';
+      : '';
 
     this.element.innerHTML = `
       ${cooldownBanner}

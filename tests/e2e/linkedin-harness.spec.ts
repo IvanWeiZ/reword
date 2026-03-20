@@ -9,10 +9,7 @@ import { dirname } from 'node:path';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const fixturePath = resolve(__dir, 'fixtures/linkedin-messaging.html');
-const shadowPierceCode = readFileSync(
-  resolve(__dir, '../../dist/shadow-pierce.js'),
-  'utf-8',
-);
+const shadowPierceCode = readFileSync(resolve(__dir, '../../dist/shadow-pierce.js'), 'utf-8');
 
 let context: BrowserContext;
 let server: Server;
@@ -82,9 +79,7 @@ test.describe('LinkedIn harness e2e', () => {
     const { page, consoleLogs } = await openLinkedInPage();
 
     // The content script should log that it found and is watching the input
-    const foundInput = consoleLogs.some((l) =>
-      l.includes('[Reword] watching input'),
-    );
+    const foundInput = consoleLogs.some((l) => l.includes('[Reword] watching input'));
     expect(foundInput).toBe(true);
 
     await page.close();
@@ -97,10 +92,9 @@ test.describe('LinkedIn harness e2e', () => {
     await input.click();
     // Clear the default <p><br></p> content and type a harsh message
     await input.fill('');
-    await input.pressSequentially(
-      'per my last email, I already explained this to you',
-      { delay: 30 },
-    );
+    await input.pressSequentially('per my last email, I already explained this to you', {
+      delay: 30,
+    });
 
     // Wait for debounce (DEBOUNCE_MS=800) + AI_DEBOUNCE_MS(2000) + buffer
     await page.waitForTimeout(4000);
@@ -135,10 +129,9 @@ test.describe('LinkedIn harness e2e', () => {
     const input = page.locator('.msg-form__contenteditable');
     await input.click();
     await input.fill('');
-    await input.pressSequentially(
-      'per my last email, I already explained this clearly',
-      { delay: 30 },
-    );
+    await input.pressSequentially('per my last email, I already explained this clearly', {
+      delay: 30,
+    });
 
     // Wait for debounce + analysis trigger
     await page.waitForTimeout(4000);
@@ -176,10 +169,7 @@ test.describe('LinkedIn harness e2e', () => {
     const input = page.locator('.msg-form__contenteditable');
     await input.click();
     await input.fill('');
-    await input.pressSequentially(
-      'you are completely useless!!',
-      { delay: 20 },
-    );
+    await input.pressSequentially('you are completely useless!!', { delay: 20 });
     await page.waitForTimeout(500);
 
     // Press Enter — shadow-pierce should block it

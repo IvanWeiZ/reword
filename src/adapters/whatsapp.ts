@@ -10,8 +10,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
     return (
       document.querySelector<HTMLElement>(
         '.copyable-area div[contenteditable="true"][data-tab="10"]',
-      ) ??
-      document.querySelector<HTMLElement>('.copyable-area div[contenteditable="true"]')
+      ) ?? document.querySelector<HTMLElement>('.copyable-area div[contenteditable="true"]')
     );
   }
 

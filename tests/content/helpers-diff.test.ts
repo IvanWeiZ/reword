@@ -63,7 +63,7 @@ describe('wordDiff', () => {
 
   it('handles a realistic rewrite', () => {
     const original = 'Whatever, I guess that works.';
-    const rewritten = "That works for me! I was looking forward to our original plan though.";
+    const rewritten = 'That works for me! I was looking forward to our original plan though.';
     const result = wordDiff(original, rewritten);
 
     // Check that the diff contains both removed and added segments

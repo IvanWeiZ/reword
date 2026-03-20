@@ -6,9 +6,7 @@ export class OutlookAdapter implements PlatformAdapter {
 
   findInputField(): HTMLElement | null {
     // Outlook Web uses a contentEditable div with role="textbox" and aria-label containing "Message body"
-    return document.querySelector<HTMLElement>(
-      'div[role="textbox"][aria-label*="Message body"]',
-    );
+    return document.querySelector<HTMLElement>('div[role="textbox"][aria-label*="Message body"]');
   }
 
   placeTriggerIcon(icon: HTMLElement): (() => void) | null {
@@ -35,9 +33,7 @@ export class OutlookAdapter implements PlatformAdapter {
   scrapeThreadContext(): ThreadMessage[] {
     const messages: ThreadMessage[] = [];
     // Outlook Web renders conversation messages in divs with role="document" or within .ItemContent
-    const messageEls = document.querySelectorAll(
-      '[role="document"] .XbIp4, div.aVla3',
-    );
+    const messageEls = document.querySelectorAll('[role="document"] .XbIp4, div.aVla3');
     for (const el of messageEls) {
       const text = el.textContent?.trim();
       if (!text) continue;
@@ -58,9 +54,7 @@ export class OutlookAdapter implements PlatformAdapter {
 
   checkHealth(): boolean {
     const input = this.findInputField();
-    const sendBtn = document.querySelector(
-      'button[aria-label="Send"], button[title="Send"]',
-    );
+    const sendBtn = document.querySelector('button[aria-label="Send"], button[title="Send"]');
     if (!input) console.warn('[Reword] Outlook: compose input not found');
     if (!sendBtn) console.warn('[Reword] Outlook: send button not found');
     return input !== null && sendBtn !== null;

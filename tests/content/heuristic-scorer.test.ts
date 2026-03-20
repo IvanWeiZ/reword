@@ -193,5 +193,4 @@ describe('scoreMessage', () => {
       expect(scoreMessage('I said I would do it!!!')).toBeGreaterThanOrEqual(0.25);
     });
   });
-
 });

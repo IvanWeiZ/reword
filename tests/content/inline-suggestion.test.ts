@@ -27,7 +27,12 @@ describe('InlineSuggestion', () => {
     });
 
     it('shows ghost text after flagged result', () => {
-      suggestion.show(editableDiv, 'You should know better', 'I think we can improve this', onAccept);
+      suggestion.show(
+        editableDiv,
+        'You should know better',
+        'I think we can improve this',
+        onAccept,
+      );
 
       expect(suggestion.isVisible).toBe(true);
       const ghost = editableDiv.querySelector('.reword-ghost');
@@ -56,7 +61,12 @@ describe('InlineSuggestion', () => {
     });
 
     it('Tab accepts the suggestion', () => {
-      suggestion.show(editableDiv, 'You should know better', 'I think we can improve this', onAccept);
+      suggestion.show(
+        editableDiv,
+        'You should know better',
+        'I think we can improve this',
+        onAccept,
+      );
 
       const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
       document.dispatchEvent(tabEvent);

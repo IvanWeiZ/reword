@@ -19,7 +19,7 @@ test.describe('Send interception (standalone)', () => {
     const page = await browser.newPage();
 
     const consoleLogs: string[] = [];
-    page.on('console', msg => consoleLogs.push(msg.text()));
+    page.on('console', (msg) => consoleLogs.push(msg.text()));
 
     // Inject shadow-pierce FIRST (before page handler), then set up the page handler
     await page.setContent(`<!DOCTYPE html><html><body>
@@ -53,11 +53,14 @@ test.describe('Send interception (standalone)', () => {
     await page.waitForTimeout(500);
 
     const logText = await page.locator('#log').textContent();
-    const blocked = consoleLogs.some(l => l.includes('BLOCKED'));
+    const blocked = consoleLogs.some((l) => l.includes('BLOCKED'));
 
     console.log('sent-log:', logText);
     console.log('blocked:', blocked);
-    console.log('reword logs:', consoleLogs.filter(l => l.includes('Reword')));
+    console.log(
+      'reword logs:',
+      consoleLogs.filter((l) => l.includes('Reword')),
+    );
 
     // The page's handler should NOT have fired (Enter was blocked)
     expect(logText).not.toContain('SENT');
@@ -113,7 +116,9 @@ test.describe('Send interception (standalone)', () => {
     await page.evaluate(() => {
       document.querySelector('[contenteditable]')!.addEventListener('keydown', (e) => {
         if ((e as KeyboardEvent).key === 'Enter') {
-          document.getElementById('log')!.textContent = (e as KeyboardEvent).shiftKey ? 'NEWLINE' : 'SENT';
+          document.getElementById('log')!.textContent = (e as KeyboardEvent).shiftKey
+            ? 'NEWLINE'
+            : 'SENT';
         }
       });
     });
@@ -372,17 +377,21 @@ test.describe('Send interception (standalone)', () => {
 
     // Send button should be disabled (opacity dimmed)
     const sendBtn = page.locator('.msg-form__send-button');
-    const opacity = await sendBtn.evaluate(el => getComputedStyle(el).opacity);
+    const opacity = await sendBtn.evaluate((el) => getComputedStyle(el).opacity);
     expect(parseFloat(opacity)).toBeLessThan(1);
 
     // Block bar should be visible
     await expect(page.locator('#reword-block-bar')).toBeVisible();
 
     // Simulate rewrite acceptance: replace text with clean version + send unblock message
-    await input.evaluate(el => { el.textContent = 'I appreciate your perspective on this.'; });
+    await input.evaluate((el) => {
+      el.textContent = 'I appreciate your perspective on this.';
+    });
     await page.evaluate(() => {
       window.postMessage({ type: 'reword-unblock' }, '*');
-      document.querySelector('[contenteditable]')!.dispatchEvent(new Event('input', { bubbles: true }));
+      document
+        .querySelector('[contenteditable]')!
+        .dispatchEvent(new Event('input', { bubbles: true }));
     });
     await page.waitForTimeout(600);
 
@@ -390,7 +399,7 @@ test.describe('Send interception (standalone)', () => {
     await expect(page.locator('#reword-block-bar')).toBeHidden();
 
     // Send button should be re-enabled (full opacity)
-    const opacityAfter = await sendBtn.evaluate(el => getComputedStyle(el).opacity);
+    const opacityAfter = await sendBtn.evaluate((el) => getComputedStyle(el).opacity);
     expect(parseFloat(opacityAfter)).toBeGreaterThanOrEqual(0.9);
 
     // Verify the block style tag is removed

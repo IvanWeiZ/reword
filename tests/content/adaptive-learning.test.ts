@@ -6,15 +6,21 @@ import { handleMessage } from '../../src/background/service-worker';
 
 // --- Module-level mocks for GeminiClient and OnDeviceClient ---
 
-const { mockValidateApiKey, mockAnalyze, mockAnalyzeIncoming, mockIsConfigured, mockConfigure, mockCheckTone } =
-  vi.hoisted(() => ({
-    mockValidateApiKey: vi.fn(),
-    mockAnalyze: vi.fn(),
-    mockAnalyzeIncoming: vi.fn(),
-    mockIsConfigured: vi.fn().mockReturnValue(false),
-    mockConfigure: vi.fn(),
-    mockCheckTone: vi.fn(),
-  }));
+const {
+  mockValidateApiKey,
+  mockAnalyze,
+  mockAnalyzeIncoming,
+  mockIsConfigured,
+  mockConfigure,
+  mockCheckTone,
+} = vi.hoisted(() => ({
+  mockValidateApiKey: vi.fn(),
+  mockAnalyze: vi.fn(),
+  mockAnalyzeIncoming: vi.fn(),
+  mockIsConfigured: vi.fn().mockReturnValue(false),
+  mockConfigure: vi.fn(),
+  mockCheckTone: vi.fn(),
+}));
 
 vi.mock('../../src/background/gemini-client', () => ({
   GeminiClient: class {

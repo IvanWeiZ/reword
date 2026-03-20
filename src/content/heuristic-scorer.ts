@@ -60,38 +60,52 @@ const EXCLAMATION_INFLATION_WEIGHT = 0.25;
  * Scored as a separate category so a single profane word crosses threshold.
  */
 const PROFANITY_PATTERNS: RegExp[] = [
-  /\bfuck\b/i, /\bfucking\b/i, /\bfucked\b/i, /\bfuck\s?(you|off|this|that)\b/i,
-  /\bshit\b/i, /\bshitty\b/i, /\bbullshit\b/i,
-  /\bass\b/i, /\basshole\b/i,
-  /\bbitch\b/i, /\bbitching\b/i,
+  /\bfuck\b/i,
+  /\bfucking\b/i,
+  /\bfucked\b/i,
+  /\bfuck\s?(you|off|this|that)\b/i,
+  /\bshit\b/i,
+  /\bshitty\b/i,
+  /\bbullshit\b/i,
+  /\bass\b/i,
+  /\basshole\b/i,
+  /\bbitch\b/i,
+  /\bbitching\b/i,
   /\bdamn\s?(you|it)\b/i,
-  /\bstfu\b/i, /\bwtf\b/i, /\bgtfo\b/i,
+  /\bstfu\b/i,
+  /\bwtf\b/i,
+  /\bgtfo\b/i,
   /\bscrew\s?(you|off|this|that)\b/i,
   /\bpiss\s?(off|me)\b/i,
   /\bcrap\b/i,
-  /\bdumbass\b/i, /\bdumb\s+ass\b/i,
+  /\bdumbass\b/i,
+  /\bdumb\s+ass\b/i,
   /\bjackass\b/i,
-  /\bmoron\b/i, /\bimbecile\b/i,
+  /\bmoron\b/i,
+  /\bimbecile\b/i,
 ];
 const PROFANITY_WEIGHT = 0.45;
 
 /**
  * Directed insults — "you are [negative]" constructions are worse than standalone keywords.
  */
-const DIRECTED_INSULT_RE = /\byou\s+(are|r)\s+(\w+\s+)?(stupid|dumb|useless|pathetic|terrible|awful|incompetent|worthless|an?\s+idiot|an?\s+moron)\b/i;
+const DIRECTED_INSULT_RE =
+  /\byou\s+(are|r)\s+(\w+\s+)?(stupid|dumb|useless|pathetic|terrible|awful|incompetent|worthless|an?\s+idiot|an?\s+moron)\b/i;
 const DIRECTED_INSULT_WEIGHT = 0.45;
 
 /**
  * Negative emojis — inherently hostile or dismissive emoji.
  * 🙄 😒 😠 😡 😤 🤬 💩 🖕 👎 🤦 🤡
  */
-const NEGATIVE_EMOJI_RE = /[\u{1F644}\u{1F612}\u{1F620}\u{1F621}\u{1F624}\u{1F92C}\u{1F4A9}\u{1F595}\u{1F44E}\u{1F926}\u{1F921}]/u;
+const NEGATIVE_EMOJI_RE =
+  /[\u{1F644}\u{1F612}\u{1F620}\u{1F621}\u{1F624}\u{1F92C}\u{1F4A9}\u{1F595}\u{1F44E}\u{1F926}\u{1F921}]/u;
 const NEGATIVE_EMOJI_WEIGHT = 0.3;
 
 /**
  * Sarcastic emoji — 🙂 😊 🙃 ☺ after dismissive/negative text.
  */
-const SARCASTIC_EMOJI_RE = /\b(fine|whatever|sure|okay|ok|great|thanks|right)\b[.!,]?\s*[\u{1F642}\u{1F60A}\u{1F643}\u{263A}]/iu;
+const SARCASTIC_EMOJI_RE =
+  /\b(fine|whatever|sure|okay|ok|great|thanks|right)\b[.!,]?\s*[\u{1F642}\u{1F60A}\u{1F643}\u{263A}]/iu;
 const SARCASTIC_EMOJI_WEIGHT = 0.25;
 
 /**

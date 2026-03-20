@@ -28,7 +28,7 @@ export async function launchWithExtension(): Promise<BrowserContext> {
     });
   }
   // Give the extension a moment to fully initialize
-  await new Promise(r => setTimeout(r, 1000));
+  await new Promise((r) => setTimeout(r, 1000));
   return context;
 }
 

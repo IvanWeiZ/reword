@@ -185,12 +185,8 @@ describe('GeminiClient', () => {
       client.configure('test-key');
 
       const streamCalls: string[] = [];
-      await client.analyzeStreaming(
-        'test message',
-        'workplace',
-        'medium',
-        [],
-        (partial) => streamCalls.push(partial),
+      await client.analyzeStreaming('test message', 'workplace', 'medium', [], (partial) =>
+        streamCalls.push(partial),
       );
 
       expect(streamCalls).toHaveLength(2);
@@ -218,14 +214,7 @@ describe('GeminiClient', () => {
       client.configure('test-key');
 
       await expect(
-        client.analyzeStreaming(
-          'test',
-          'workplace',
-          'medium',
-          [],
-          () => {},
-          controller.signal,
-        ),
+        client.analyzeStreaming('test', 'workplace', 'medium', [], () => {}, controller.signal),
       ).rejects.toThrow('Aborted');
     });
 
@@ -261,14 +250,7 @@ describe('GeminiClient', () => {
       setTimeout(() => timeoutCtrl.abort(), 10);
 
       await expect(
-        client.analyzeStreaming(
-          'test',
-          'workplace',
-          'medium',
-          [],
-          () => {},
-          timeoutCtrl.signal,
-        ),
+        client.analyzeStreaming('test', 'workplace', 'medium', [], () => {}, timeoutCtrl.signal),
       ).rejects.toThrow('Aborted');
     });
   });
@@ -281,12 +263,7 @@ describe('GeminiClient', () => {
       const client = new GeminiClient();
       client.configure('test-key');
 
-      const result = await client.analyze(
-        'Whatever.',
-        'workplace',
-        'medium',
-        [],
-      );
+      const result = await client.analyze('Whatever.', 'workplace', 'medium', []);
 
       expect(result.shouldFlag).toBe(true);
       expect(result.riskLevel).toBe('medium');
@@ -298,9 +275,9 @@ describe('GeminiClient', () => {
   describe('analyzeIncoming()', () => {
     it('throws if not configured', async () => {
       const client = new GeminiClient();
-      await expect(
-        client.analyzeIncoming('some message', []),
-      ).rejects.toThrow('Gemini client not configured');
+      await expect(client.analyzeIncoming('some message', [])).rejects.toThrow(
+        'Gemini client not configured',
+      );
     });
 
     it('returns parsed incoming analysis', async () => {
@@ -313,10 +290,9 @@ describe('GeminiClient', () => {
       const client = new GeminiClient();
       client.configure('test-key');
 
-      const result = await client.analyzeIncoming(
-        'You always do this.',
-        [{ sender: 'self', text: 'I was just asking' }],
-      );
+      const result = await client.analyzeIncoming('You always do this.', [
+        { sender: 'self', text: 'I was just asking' },
+      ]);
 
       expect(mockGenerateContent).toHaveBeenCalledTimes(1);
       expect(result.riskLevel).toBe('high');

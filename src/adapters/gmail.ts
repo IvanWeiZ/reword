@@ -49,8 +49,10 @@ export class GmailAdapter implements PlatformAdapter {
   }
 
   findSendButton(): HTMLElement | null {
-    return document.querySelector<HTMLElement>('div[role="button"][data-tooltip*="Send"]') ??
-      document.querySelector<HTMLElement>('.btC .dC div[role="button"]');
+    return (
+      document.querySelector<HTMLElement>('div[role="button"][data-tooltip*="Send"]') ??
+      document.querySelector<HTMLElement>('.btC .dC div[role="button"]')
+    );
   }
 
   getIncomingMessageElements(): HTMLElement[] {

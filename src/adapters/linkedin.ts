@@ -2,7 +2,10 @@ import type { PlatformAdapter, ThreadMessage } from '../shared/types';
 import { writeBackToElement } from './base';
 
 /** Recursively search through shadow DOM trees */
-function deepQuerySelector(selector: string, root: Document | ShadowRoot | Element = document): HTMLElement | null {
+function deepQuerySelector(
+  selector: string,
+  root: Document | ShadowRoot | Element = document,
+): HTMLElement | null {
   // Try direct query first
   const direct = root.querySelector<HTMLElement>(selector);
   if (direct) return direct;
@@ -103,9 +106,11 @@ export class LinkedInAdapter implements PlatformAdapter {
   }
 
   findSendButton(): HTMLElement | null {
-    return document.querySelector<HTMLElement>('.msg-form__send-button') ??
+    return (
+      document.querySelector<HTMLElement>('.msg-form__send-button') ??
       document.querySelector<HTMLElement>('button[type="submit"].msg-form__send-btn') ??
-      document.querySelector<HTMLElement>('.msg-form button[type="submit"]');
+      document.querySelector<HTMLElement>('.msg-form button[type="submit"]')
+    );
   }
 
   placeIncomingIndicator(messageEl: HTMLElement, indicator: HTMLElement): (() => void) | null {

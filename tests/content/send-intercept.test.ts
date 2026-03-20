@@ -17,10 +17,14 @@ describe('Send interception', () => {
     const parent = input.parentElement!;
     let blocked = false;
 
-    parent.addEventListener('keydown', (e) => {
-      e.preventDefault();
-      blocked = true;
-    }, true);
+    parent.addEventListener(
+      'keydown',
+      (e) => {
+        e.preventDefault();
+        blocked = true;
+      },
+      true,
+    );
 
     const event = new KeyboardEvent('keydown', {
       key: 'Enter',
@@ -39,19 +43,25 @@ describe('Send interception', () => {
     const parent = input.parentElement!;
     let blocked = false;
 
-    parent.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        blocked = true;
-      }
-    }, true);
+    parent.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          blocked = true;
+        }
+      },
+      true,
+    );
 
-    input.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Enter',
-      shiftKey: true,
-      bubbles: true,
-      cancelable: true,
-    }));
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
     expect(blocked).toBe(false);
 
     parent.remove();
@@ -63,28 +73,40 @@ describe('Send interception', () => {
     const MIN_LENGTH = 10;
     let blocked = false;
 
-    parent.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        const text = input.textContent?.trim() ?? '';
-        if (text.length >= MIN_LENGTH) {
-          e.preventDefault();
-          blocked = true;
+    parent.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          const text = input.textContent?.trim() ?? '';
+          if (text.length >= MIN_LENGTH) {
+            e.preventDefault();
+            blocked = true;
+          }
         }
-      }
-    }, true);
+      },
+      true,
+    );
 
     // Short message — should pass through
     input.textContent = 'hi';
-    input.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Enter', bubbles: true, cancelable: true,
-    }));
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
     expect(blocked).toBe(false);
 
     // Long harsh message — should block
     input.textContent = 'you are useless and terrible!!!';
-    input.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Enter', bubbles: true, cancelable: true,
-    }));
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
     expect(blocked).toBe(true);
 
     parent.remove();

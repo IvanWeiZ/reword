@@ -38,7 +38,8 @@ describe('OutlookAdapter', () => {
   });
 
   it('placeTriggerIcon returns null when send button/toolbar is missing', () => {
-    document.body.innerHTML = '<div role="textbox" aria-label="Message body" contenteditable="true"></div>';
+    document.body.innerHTML =
+      '<div role="textbox" aria-label="Message body" contenteditable="true"></div>';
     const icon = document.createElement('div');
     expect(adapter.placeTriggerIcon(icon)).toBeNull();
   });

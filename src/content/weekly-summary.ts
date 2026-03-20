@@ -39,7 +39,11 @@ export function shouldShowSummary(
   now: Date = new Date(),
 ): boolean {
   // Must have some stats to show
-  if (currentWeek.analyzed === 0 && currentWeek.flagged === 0 && currentWeek.rewritesAccepted === 0) {
+  if (
+    currentWeek.analyzed === 0 &&
+    currentWeek.flagged === 0 &&
+    currentWeek.rewritesAccepted === 0
+  ) {
     return false;
   }
 

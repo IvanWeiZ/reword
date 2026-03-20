@@ -42,9 +42,7 @@ describe('InputObserver', () => {
     textarea.value = 'This is a longer message that should be analyzed';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     vi.advanceTimersByTime(800);
-    expect(onHeuristic).toHaveBeenCalledWith(
-      'This is a longer message that should be analyzed',
-    );
+    expect(onHeuristic).toHaveBeenCalledWith('This is a longer message that should be analyzed');
     expect(onAiAnalyze).not.toHaveBeenCalled();
   });
 
@@ -53,12 +51,8 @@ describe('InputObserver', () => {
     textarea.value = 'This is a longer message that should be analyzed';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     vi.advanceTimersByTime(2000);
-    expect(onHeuristic).toHaveBeenCalledWith(
-      'This is a longer message that should be analyzed',
-    );
-    expect(onAiAnalyze).toHaveBeenCalledWith(
-      'This is a longer message that should be analyzed',
-    );
+    expect(onHeuristic).toHaveBeenCalledWith('This is a longer message that should be analyzed');
+    expect(onAiAnalyze).toHaveBeenCalledWith('This is a longer message that should be analyzed');
   });
 
   it('resets both debounces on continued typing', () => {

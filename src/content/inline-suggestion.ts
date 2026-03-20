@@ -121,10 +121,7 @@ export class InlineSuggestion {
   // --- Private helpers ---
 
   private isContentEditable(el: HTMLElement): boolean {
-    return (
-      el.isContentEditable === true ||
-      el.getAttribute('contenteditable') === 'true'
-    );
+    return el.isContentEditable === true || el.getAttribute('contenteditable') === 'true';
   }
 
   private showGhostSpan(target: HTMLElement, text: string): void {

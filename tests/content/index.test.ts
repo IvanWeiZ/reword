@@ -195,7 +195,8 @@ describe('detectAdapter() — adapter selection per hostname', () => {
         if (host === 'x.com' || host === 'twitter.com') return new TwitterAdapter();
         if (host.endsWith('.slack.com') || host === 'app.slack.com') return new SlackAdapter();
         if (host === 'discord.com') return new DiscordAdapter();
-        if (host === 'outlook.live.com' || host === 'outlook.office.com') return new OutlookAdapter();
+        if (host === 'outlook.live.com' || host === 'outlook.office.com')
+          return new OutlookAdapter();
         if (host === 'teams.microsoft.com') return new TeamsAdapter();
         if (host === 'web.whatsapp.com') return new WhatsAppAdapter();
         return new GenericFallbackAdapter();

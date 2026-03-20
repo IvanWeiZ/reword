@@ -258,7 +258,12 @@ describe('buildAnalysisPrompt de-escalation', () => {
       { sender: 'other', text: 'Can you send the file?' },
       { sender: 'self', text: 'Sure, here it is' },
     ];
-    const prompt = buildAnalysisPrompt('Thanks for your patience', 'workplace', 'medium', calmThread);
+    const prompt = buildAnalysisPrompt(
+      'Thanks for your patience',
+      'workplace',
+      'medium',
+      calmThread,
+    );
     expect(prompt).not.toContain('ESCALATION DETECTED');
     expect(prompt).not.toContain('De-escalate');
   });
