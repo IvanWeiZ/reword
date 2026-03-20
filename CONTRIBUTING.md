@@ -2,13 +2,13 @@
 
 Thanks for your interest in making communication kinder. Here's how to get started.
 
-## Prerequisites
+## [ ] Prerequisites
 
 - Node.js 18+
 - A Chromium browser (Chrome, Edge, Brave, Arc)
 - A [Gemini API key](https://aistudio.google.com/apikey) (free)
 
-## Setup
+## [ ] Setup
 
 ```bash
 git clone https://github.com/IvanWeiZ/reword.git
@@ -19,7 +19,7 @@ npm run build
 
 Load the extension: `chrome://extensions/` > Developer mode > Load unpacked > select `dist/`.
 
-## Development workflow
+## [ ] Development workflow
 
 ```bash
 # Terminal 1: rebuild on save
@@ -31,7 +31,7 @@ npm run test:watch
 
 After changes, refresh the extension at `chrome://extensions/`.
 
-## Before submitting a PR
+## [ ] Before submitting a PR
 
 ```bash
 npm test          # All tests pass
@@ -39,7 +39,7 @@ npm run lint      # No lint errors
 npm run build     # Build succeeds
 ```
 
-## Commit messages
+## [ ] Commit messages
 
 Use [conventional commits](https://www.conventionalcommits.org/):
 
@@ -49,7 +49,7 @@ Use [conventional commits](https://www.conventionalcommits.org/):
 - `refactor:` code change that neither fixes nor adds
 - `docs:` documentation only
 
-## Code style
+## [ ] Code style
 
 - TypeScript strict mode
 - ESM modules (`import`/`export`)
@@ -57,7 +57,7 @@ Use [conventional commits](https://www.conventionalcommits.org/):
 - CSS classes prefixed with `reword-`
 - Run `npm run format` to auto-format
 
-## Adding a new platform
+## [ ] Adding a new platform
 
 1. Create adapter in `src/adapters/` implementing `PlatformAdapter`
 2. Register hostname in `src/content/index.ts`
@@ -67,10 +67,10 @@ Use [conventional commits](https://www.conventionalcommits.org/):
 
 See existing adapters (`gmail.ts`, `linkedin.ts`) for examples.
 
-## Tests
+## [ ] Tests
 
 Tests use [Vitest](https://vitest.dev/) with jsdom. Place tests in `tests/` mirroring the `src/` structure. Use existing mocks in `tests/mocks/`.
 
-## Questions?
+## [ ] Questions?
 
 Open an issue or start a discussion. We're happy to help.

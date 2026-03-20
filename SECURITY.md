@@ -1,6 +1,6 @@
 # Security Policy
 
-## Reporting a vulnerability
+## [ ] Reporting a vulnerability
 
 If you discover a security vulnerability in Reword, please report it responsibly:
 
@@ -11,7 +11,7 @@ If you discover a security vulnerability in Reword, please report it responsibly
    - Potential impact
 3. We will acknowledge within 48 hours and aim to fix critical issues within 7 days.
 
-## Scope
+## [ ] Scope
 
 Reword runs entirely in your browser. There is no Reword server. The only network call is to the Gemini API using your own API key. Relevant security concerns include:
 
@@ -20,9 +20,9 @@ Reword runs entirely in your browser. There is no Reword server. The only networ
 - Unintended data exfiltration via the Gemini API call
 - DOM manipulation vulnerabilities in platform adapters
 
-## Supported versions
+## [ ] Supported versions
 
 | Version | Supported |
-|---------|-----------|
+| ------- | --------- |
 | 0.2.x   | Yes       |
 | < 0.2   | No        |

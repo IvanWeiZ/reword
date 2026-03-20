@@ -57,42 +57,42 @@ Capture the following at 1280x800 or 640x400 resolution. Use a clean Chrome prof
 
 The Chrome Web Store requires declaring data usage. Here is what to select:
 
-### Single Purpose Description
+### [ ] Single Purpose Description
 
 "Detects problematic tone in user-composed messages on supported platforms and offers AI-powered kinder rewrite suggestions."
 
-### Data Usage Disclosures
+### [ ] Data Usage Disclosures
 
-| Data Type | Collected? | Usage |
-|---|---|---|
-| Personally identifiable information | No | Not collected |
-| Health information | No | Not collected |
-| Financial information | No | Not collected |
-| Authentication information | No | Not collected |
-| Personal communications | No | Not stored. Message text is analyzed locally or sent to Google Gemini API using the user's own API key for real-time analysis only. No messages are stored, logged, or transmitted to any server operated by the developer. |
-| Location | No | Not collected |
-| Web history | No | Not collected |
-| User activity | No | Not collected |
-| Website content | No | Not collected |
+| Data Type                           | Collected? | Usage                                                                                                                                                                                                                       |
+| ----------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Personally identifiable information | No         | Not collected                                                                                                                                                                                                               |
+| Health information                  | No         | Not collected                                                                                                                                                                                                               |
+| Financial information               | No         | Not collected                                                                                                                                                                                                               |
+| Authentication information          | No         | Not collected                                                                                                                                                                                                               |
+| Personal communications             | No         | Not stored. Message text is analyzed locally or sent to Google Gemini API using the user's own API key for real-time analysis only. No messages are stored, logged, or transmitted to any server operated by the developer. |
+| Location                            | No         | Not collected                                                                                                                                                                                                               |
+| Web history                         | No         | Not collected                                                                                                                                                                                                               |
+| User activity                       | No         | Not collected                                                                                                                                                                                                               |
+| Website content                     | No         | Not collected                                                                                                                                                                                                               |
 
-### Certifications
+### [ ] Certifications
 
 - [x] The extension does not sell user data to third parties
 - [x] The extension does not use or transfer user data for purposes unrelated to the extension's single purpose
 - [x] The extension does not use or transfer user data to determine creditworthiness or for lending purposes
 
-### Permissions Justification
+### [ ] Permissions Justification
 
-| Permission | Justification |
-|---|---|
-| `storage` | Store user preferences (API key, sensitivity level, relationship profiles) locally in chrome.storage.local. No data is synced or transmitted. |
-| `activeTab` | Access the DOM of the active tab to detect compose fields and inject the tone review UI on supported platforms (Gmail, LinkedIn, Twitter/X). |
-| Host permission: `mail.google.com` | Inject content script to detect Gmail compose fields and provide tone analysis. |
-| Host permission: `www.linkedin.com` | Inject content script to detect LinkedIn message fields and provide tone analysis. |
-| Host permission: `x.com`, `twitter.com` | Inject content script to detect Twitter/X compose fields and provide tone analysis. |
-| Host permission: `*.slack.com` | Inject content script to detect Slack message fields and provide tone analysis. |
-| Host permission: `discord.com` | Inject content script to detect Discord message fields and provide tone analysis. |
-| Host permission: `generativelanguage.googleapis.com` | Send user-composed message text to Google Gemini API for AI-powered tone analysis, using the user's own API key. |
+| Permission                                           | Justification                                                                                                                                 |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`                                            | Store user preferences (API key, sensitivity level, relationship profiles) locally in chrome.storage.local. No data is synced or transmitted. |
+| `activeTab`                                          | Access the DOM of the active tab to detect compose fields and inject the tone review UI on supported platforms (Gmail, LinkedIn, Twitter/X).  |
+| Host permission: `mail.google.com`                   | Inject content script to detect Gmail compose fields and provide tone analysis.                                                               |
+| Host permission: `www.linkedin.com`                  | Inject content script to detect LinkedIn message fields and provide tone analysis.                                                            |
+| Host permission: `x.com`, `twitter.com`              | Inject content script to detect Twitter/X compose fields and provide tone analysis.                                                           |
+| Host permission: `*.slack.com`                       | Inject content script to detect Slack message fields and provide tone analysis.                                                               |
+| Host permission: `discord.com`                       | Inject content script to detect Discord message fields and provide tone analysis.                                                             |
+| Host permission: `generativelanguage.googleapis.com` | Send user-composed message text to Google Gemini API for AI-powered tone analysis, using the user's own API key.                              |
 
 ## Review Notes for Chrome Web Store Team
 

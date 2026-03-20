@@ -44,7 +44,7 @@ Reword does **not** collect, store, or transmit:
 
 ## Third-Party Services
 
-### Google Gemini API
+### [ ] Google Gemini API
 
 When local analysis is insufficient, Reword sends message text to the Google Gemini API for tone analysis. This connection is:
 
@@ -55,7 +55,7 @@ When local analysis is insufficient, Reword sends message text to the Google Gem
 
 Reword's developers have no access to your API key or the data sent to Google.
 
-### No Other Third-Party Services
+### [ ] No Other Third-Party Services
 
 Reword does not use:
 
@@ -72,12 +72,12 @@ Reword does not use cookies, web beacons, pixels, or any other tracking technolo
 
 ## Permissions Explained
 
-| Permission | Why It's Needed |
-|---|---|
-| `storage` | Save your settings (API key, sensitivity, relationship profiles) locally in your browser |
-| `activeTab` | Read the compose field on the current tab to analyze your message and inject the review UI |
-| Host permissions (Gmail, LinkedIn, Twitter/X, Slack, Discord) | Allow the content script to run on these specific sites to detect compose fields |
-| Host permission (googleapis.com) | Allow your browser to send requests to the Gemini API using your API key |
+| Permission                                                    | Why It's Needed                                                                            |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `storage`                                                     | Save your settings (API key, sensitivity, relationship profiles) locally in your browser   |
+| `activeTab`                                                   | Read the compose field on the current tab to analyze your message and inject the review UI |
+| Host permissions (Gmail, LinkedIn, Twitter/X, Slack, Discord) | Allow the content script to run on these specific sites to detect compose fields           |
+| Host permission (googleapis.com)                              | Allow your browser to send requests to the Gemini API using your API key                   |
 
 ## Data Retention
 
@@ -106,4 +106,4 @@ If you have questions about this privacy policy or Reword's data practices, plea
 
 ---
 
-*This privacy policy applies to the Reword Chrome extension version 0.2.0 and later.*
+_This privacy policy applies to the Reword Chrome extension version 0.2.0 and later._

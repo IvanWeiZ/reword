@@ -34,19 +34,19 @@ No account. No server. No judgment. Just better communication.
 
 ## Features
 
-| | Feature | Details |
-|---|---|---|
-| :globe_with_meridians: | **6 Platforms** | Gmail, LinkedIn, Twitter/X, Slack, Discord + generic fallback for any site |
-| :brain: | **3-Tier AI** | Local heuristics (< 5ms) &#8594; Chrome on-device AI &#8594; Gemini 2.5 Flash. Most messages never hit the paid API |
-| :lock: | **Privacy-First** | No account, no server, no data leaves your browser. Your API key, your rules |
-| :people_holding_hands: | **Relationship-Aware** | Configure per-domain contexts: _workplace_, _romantic_, _family_. The AI rewrites differently for your partner vs. your boss |
-| :incoming_envelope: | **Incoming Analysis** | Optionally analyze messages you _receive_ to understand the tone before reacting |
-| :art: | **Dark Mode** | Popup card respects OS/site dark theme automatically |
-| :jigsaw: | **Custom Patterns** | Add your own trigger phrases and suppression lists |
-| :bust_in_silhouette: | **Tone Personas** | Beyond Warmer / Direct / Minimal — define custom rewrite styles |
-| :keyboard: | **Keyboard Shortcuts** | Accept rewrites instantly with `Alt+1`, `Alt+2`, `Alt+3` |
-| :leftwards_arrow_with_hook: | **Undo Support** | Changed your mind? Restore the original draft with one click |
-| :shield: | **Never Blocks You** | Always shows "Send original". You're in control |
+|                             | Feature                | Details                                                                                                                      |
+| --------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| :globe_with_meridians:      | **6 Platforms**        | Gmail, LinkedIn, Twitter/X, Slack, Discord + generic fallback for any site                                                   |
+| :brain:                     | **3-Tier AI**          | Local heuristics (< 5ms) &#8594; Chrome on-device AI &#8594; Gemini 2.5 Flash. Most messages never hit the paid API          |
+| :lock:                      | **Privacy-First**      | No account, no server, no data leaves your browser. Your API key, your rules                                                 |
+| :people_holding_hands:      | **Relationship-Aware** | Configure per-domain contexts: _workplace_, _romantic_, _family_. The AI rewrites differently for your partner vs. your boss |
+| :incoming_envelope:         | **Incoming Analysis**  | Optionally analyze messages you _receive_ to understand the tone before reacting                                             |
+| :art:                       | **Dark Mode**          | Popup card respects OS/site dark theme automatically                                                                         |
+| :jigsaw:                    | **Custom Patterns**    | Add your own trigger phrases and suppression lists                                                                           |
+| :bust_in_silhouette:        | **Tone Personas**      | Beyond Warmer / Direct / Minimal — define custom rewrite styles                                                              |
+| :keyboard:                  | **Keyboard Shortcuts** | Accept rewrites instantly with `Alt+1`, `Alt+2`, `Alt+3`                                                                     |
+| :leftwards_arrow_with_hook: | **Undo Support**       | Changed your mind? Restore the original draft with one click                                                                 |
+| :shield:                    | **Never Blocks You**   | Always shows "Send original". You're in control                                                                              |
 
 ---
 
@@ -130,13 +130,13 @@ For a deep dive into the architecture, read **[docs/HOW_IT_WORKS.md](docs/HOW_IT
 
 ## Development
 
-### Prerequisites
+### [ ] Prerequisites
 
 - Chromium-based browser (Chrome, Edge, Brave, Arc)
 - Node.js 18+
 - A free [Gemini API key](https://aistudio.google.com/apikey)
 
-### Dev Workflow
+### [ ] Dev Workflow
 
 ```bash
 # Terminal 1: rebuild on every file save
@@ -148,35 +148,35 @@ npm run test:watch
 
 After changes, go to `chrome://extensions/` and click the refresh icon on the Reword card.
 
-### Available Scripts
+### [ ] Available Scripts
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Build in watch mode |
-| `npm run build` | Production build to `dist/` |
-| `npm test` | Run all unit tests once |
-| `npm run test:watch` | Tests in watch mode |
-| `npm run test:e2e` | Playwright end-to-end tests |
-| `npm run lint` | ESLint check |
-| `npm run lint:fix` | ESLint with auto-fix |
-| `npm run format` | Format with Prettier |
-| `npm run format:check` | Check formatting |
+| Command                | Description                 |
+| ---------------------- | --------------------------- |
+| `npm run dev`          | Build in watch mode         |
+| `npm run build`        | Production build to `dist/` |
+| `npm test`             | Run all unit tests once     |
+| `npm run test:watch`   | Tests in watch mode         |
+| `npm run test:e2e`     | Playwright end-to-end tests |
+| `npm run lint`         | ESLint check                |
+| `npm run lint:fix`     | ESLint with auto-fix        |
+| `npm run format`       | Format with Prettier        |
+| `npm run format:check` | Check formatting            |
 
-### Testing
+### [ ] Testing
 
 All 42 unit tests use [Vitest](https://vitest.dev/) with jsdom — no browser needed. E2E tests use [Playwright](https://playwright.dev/) with a real Chromium instance.
 
 Key test areas:
 
-| Test file | Coverage |
-|---|---|
-| `tests/content/heuristic-scorer.test.ts` | Tone scoring (passive-aggression, ALL CAPS, etc.) |
-| `tests/content/observer.test.ts` | Debounce + generation counter |
-| `tests/background/gemini-client.test.ts` | JSON parsing + code fence stripping |
-| `tests/background/service-worker.test.ts` | Message routing + tier orchestration |
-| `tests/adapters/*.test.ts` | Per-platform DOM selectors |
+| Test file                                 | Coverage                                          |
+| ----------------------------------------- | ------------------------------------------------- |
+| `tests/content/heuristic-scorer.test.ts`  | Tone scoring (passive-aggression, ALL CAPS, etc.) |
+| `tests/content/observer.test.ts`          | Debounce + generation counter                     |
+| `tests/background/gemini-client.test.ts`  | JSON parsing + code fence stripping               |
+| `tests/background/service-worker.test.ts` | Message routing + tier orchestration              |
+| `tests/adapters/*.test.ts`                | Per-platform DOM selectors                        |
 
-### Project Structure
+### [ ] Project Structure
 
 ```
 src/
@@ -192,7 +192,7 @@ docs/
   ROADMAP.md          # Feature roadmap
 ```
 
-### Adding a New Platform
+### [ ] Adding a New Platform
 
 1. Create `src/adapters/yourplatform.ts` implementing the `PlatformAdapter` interface:
    - `findInputField()` — locate the compose box
@@ -203,7 +203,7 @@ docs/
 3. Add host permissions and content script matches in `manifest.json`
 4. Create a DOM fixture in `tests/mocks/mock-dom-fixtures/` and write adapter tests
 
-### Tuning the AI
+### [ ] Tuning the AI
 
 **Heuristic scorer** (`src/content/heuristic-scorer.ts`): Add regex patterns to `PASSIVE_AGGRESSIVE_PATTERNS` (+0.35 each) or keywords to `NEGATIVE_KEYWORDS` (+0.2 each). Threshold: `HEURISTIC_THRESHOLD = 0.3`.
 
