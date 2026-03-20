@@ -146,6 +146,7 @@ function init(): void {
   let currentText = '';
   let analyzing = false;
   let cachedInput: HTMLElement | null = null;
+  let preferredLanguage: string | undefined;
 
   const banner = createWarningBanner();
 
@@ -175,9 +176,12 @@ function init(): void {
     onSuppress: (text) => sendMessage({ type: 'suppress-phrase', text }),
   });
 
-  // Load theme
+  // Load theme and preferred language
   sendMessage({ type: 'get-settings' }).then((resp) => {
-    if (resp.type === 'settings') popup.setTheme(resp.data.settings.theme);
+    if (resp.type === 'settings') {
+      popup.setTheme(resp.data.settings.theme);
+      preferredLanguage = resp.data.settings.preferredLanguage || undefined;
+    }
   });
 
   function getTextFrom(el: HTMLElement): string {
@@ -195,12 +199,15 @@ function init(): void {
     banner.show(text);
 
     try {
+      const recipientId = adapter.getRecipientIdentifier?.() ?? undefined;
       const response = await sendMessage({
         type: 'analyze',
         text,
         context: adapter.scrapeThreadContext(),
         relationshipType: 'workplace',
         sensitivity: 'medium',
+        recipientId,
+        preferredLanguage,
       });
 
       if (response.type === 'analysis-result' && response.result.shouldFlag) {
