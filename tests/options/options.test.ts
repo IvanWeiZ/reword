@@ -7,9 +7,7 @@ let mockStorage: ReturnType<typeof createMockChromeStorage>;
 
 function setupDOM() {
   document.body.innerHTML = `
-    <input id="api-key" type="password" />
-    <button id="validate-key">Validate</button>
-    <span id="key-status"></span>
+    <div id="provider-section"></div>
     <select id="sensitivity">
       <option value="low">Low</option>
       <option value="medium" selected>Medium</option>
@@ -99,25 +97,27 @@ describe('API key validation flow', () => {
     await freshSetup();
     await initModule();
 
-    const keyInput = document.getElementById('api-key') as HTMLInputElement;
-    const status = document.getElementById('key-status')!;
+    const keyInput = document.getElementById('provider-api-key') as HTMLInputElement;
+    const status = document.getElementById('provider-key-status')!;
     keyInput.value = 'AIzaSyTestKey123';
 
-    document.getElementById('validate-key')!.click();
+    document.getElementById('validate-provider-key')!.click();
     // Status should immediately show "Validating..."
     expect(status.textContent).toBe('Validating...');
 
     await tick();
 
-    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
-      type: 'validate-api-key',
-      apiKey: 'AIzaSyTestKey123',
-    });
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'validate-api-key',
+        apiKey: 'AIzaSyTestKey123',
+      }),
+    );
     expect(status.textContent).toBe('Valid!');
     expect(status.style.color).toBe('rgb(76, 175, 80)');
 
     const stored = await getStoredData();
-    expect(stored.settings.geminiApiKey).toBe('AIzaSyTestKey123');
+    expect(stored.settings.providerApiKeys['gemini']).toBe('AIzaSyTestKey123');
   });
 
   it('shows "Invalid key" when validation returns valid=false', async () => {
@@ -125,12 +125,12 @@ describe('API key validation flow', () => {
     (globalThis as any).chrome.runtime.sendMessage = vi.fn().mockResolvedValue({ valid: false });
     await initModule();
 
-    const keyInput = document.getElementById('api-key') as HTMLInputElement;
+    const keyInput = document.getElementById('provider-api-key') as HTMLInputElement;
     keyInput.value = 'bad-key';
-    document.getElementById('validate-key')!.click();
+    document.getElementById('validate-provider-key')!.click();
     await tick();
 
-    const status = document.getElementById('key-status')!;
+    const status = document.getElementById('provider-key-status')!;
     expect(status.textContent).toBe('Invalid key');
     expect(status.style.color).toBe('rgb(239, 83, 80)');
   });
@@ -142,12 +142,12 @@ describe('API key validation flow', () => {
       .mockRejectedValue(new Error('Network error'));
     await initModule();
 
-    const keyInput = document.getElementById('api-key') as HTMLInputElement;
+    const keyInput = document.getElementById('provider-api-key') as HTMLInputElement;
     keyInput.value = 'some-key';
-    document.getElementById('validate-key')!.click();
+    document.getElementById('validate-provider-key')!.click();
     await tick();
 
-    const status = document.getElementById('key-status')!;
+    const status = document.getElementById('provider-key-status')!;
     expect(status.textContent).toContain('Validation failed');
     expect(status.textContent).toContain('Network error');
     expect(status.style.color).toBe('rgb(239, 83, 80)');
@@ -155,21 +155,27 @@ describe('API key validation flow', () => {
 
   it('uses stored key when input shows masked value', async () => {
     await freshSetup({
-      settings: { ...DEFAULT_STORED_DATA.settings, geminiApiKey: 'AIzaSyStoredKey999' },
+      settings: {
+        ...DEFAULT_STORED_DATA.settings,
+        aiProvider: 'gemini',
+        providerApiKeys: { gemini: 'AIzaSyStoredKey999' },
+      },
     });
     await initModule();
 
-    // renderAll should have masked the key
-    const keyInput = document.getElementById('api-key') as HTMLInputElement;
+    // renderProviderSection should have masked the key
+    const keyInput = document.getElementById('provider-api-key') as HTMLInputElement;
     expect(keyInput.value).toContain('••');
 
-    document.getElementById('validate-key')!.click();
+    document.getElementById('validate-provider-key')!.click();
     await tick();
 
-    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
-      type: 'validate-api-key',
-      apiKey: 'AIzaSyStoredKey999',
-    });
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'validate-api-key',
+        apiKey: 'AIzaSyStoredKey999',
+      }),
+    );
   });
 });
 
@@ -725,11 +731,15 @@ describe('options page rendering', () => {
 
   it('displays masked API key', async () => {
     await freshSetup({
-      settings: { ...DEFAULT_STORED_DATA.settings, geminiApiKey: 'AIzaSyD12345678' },
+      settings: {
+        ...DEFAULT_STORED_DATA.settings,
+        aiProvider: 'gemini',
+        providerApiKeys: { gemini: 'AIzaSyD12345678' },
+      },
     });
     await initModule();
 
-    const keyInput = document.getElementById('api-key') as HTMLInputElement;
+    const keyInput = document.getElementById('provider-api-key') as HTMLInputElement;
     expect(keyInput.value).toContain('••••••••');
     expect(keyInput.value).toContain('5678');
   });

@@ -18,35 +18,6 @@ async function init() {
 }
 
 function bindEvents() {
-  // API key validation
-  document.getElementById('validate-key')!.addEventListener('click', async () => {
-    const keyInput = document.getElementById('api-key') as HTMLInputElement;
-    const status = document.getElementById('key-status')!;
-    const key = keyInput.value.startsWith('••') ? data.settings.geminiApiKey : keyInput.value;
-
-    status.textContent = 'Validating...';
-    status.style.color = '#aaa';
-
-    try {
-      const response = await chrome.runtime.sendMessage({ type: 'validate-api-key', apiKey: key });
-      const valid = response?.valid === true;
-      if (valid) {
-        data.settings.geminiApiKey = key;
-        await saveStoredData(data);
-        status.textContent = 'Valid!';
-        status.style.color = '#4caf50';
-      } else {
-        status.textContent = 'Invalid key';
-        status.style.color = '#ef5350';
-      }
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : 'Unknown error';
-      console.warn('[Reword] API key validation error:', detail);
-      status.textContent = `Validation failed: ${detail}`;
-      status.style.color = '#ef5350';
-    }
-  });
-
   // Sensitivity
   document.getElementById('sensitivity')!.addEventListener('change', async (e) => {
     data.settings.sensitivity = (e.target as HTMLSelectElement)

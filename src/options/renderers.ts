@@ -1,6 +1,26 @@
-import type { StoredData } from '../shared/types';
+import type { StoredData, ProviderName } from '../shared/types';
 import { saveStoredData } from '../shared/storage';
 import { DISMISS_SUPPRESS_THRESHOLD } from '../shared/constants';
+
+const PROVIDER_LABELS: Record<ProviderName, string> = {
+  gemini: 'Gemini',
+  claude: 'Claude',
+  openai: 'OpenAI',
+};
+
+const LANGUAGE_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: 'Auto-detect (default)' },
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'fr', label: 'French' },
+  { value: 'zh', label: 'Mandarin' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'de', label: 'German' },
+  { value: 'ar', label: 'Arabic' },
+  { value: 'hi', label: 'Hindi' },
+];
 
 /** HTML-escape a string to prevent XSS. */
 export function esc(text: string): string {
@@ -176,10 +196,246 @@ export function renderLearnedPreferences(data: StoredData) {
     .join('');
 }
 
+export function renderProviderSection(
+  container: HTMLElement,
+  data: StoredData,
+  onSave: () => void,
+): void {
+  const selectedProvider = data.settings.aiProvider;
+  const apiKeyValue = data.settings.providerApiKeys[selectedProvider] ?? '';
+  const maskedKey = apiKeyValue ? '••••••••' + apiKeyValue.slice(-4) : '';
+
+  const providerOptions = (Object.keys(PROVIDER_LABELS) as ProviderName[])
+    .map(
+      (p) =>
+        `<option value="${p}"${p === selectedProvider ? ' selected' : ''}>${esc(PROVIDER_LABELS[p])}</option>`,
+    )
+    .join('');
+
+  const languageOptions = LANGUAGE_OPTIONS.map(
+    (opt) =>
+      `<option value="${esc(opt.value)}"${opt.value === data.settings.preferredLanguage ? ' selected' : ''}>${esc(opt.label)}</option>`,
+  ).join('');
+
+  container.innerHTML = `
+    <div class="field">
+      <label for="provider-select">AI Provider</label>
+      <select id="provider-select">${providerOptions}</select>
+    </div>
+    <div class="field">
+      <label id="api-key-label" for="provider-api-key">${esc(PROVIDER_LABELS[selectedProvider])} API Key</label>
+      <input type="password" id="provider-api-key" placeholder="Enter your ${esc(PROVIDER_LABELS[selectedProvider])} API key" value="${esc(maskedKey)}">
+      <button id="validate-provider-key">Validate</button>
+      <span id="provider-key-status"></span>
+    </div>
+    <div class="field">
+      <label for="language-select">Language</label>
+      <select id="language-select">${languageOptions}</select>
+    </div>
+  `;
+
+  const providerSelect = container.querySelector<HTMLSelectElement>('#provider-select')!;
+  const apiKeyInput = container.querySelector<HTMLInputElement>('#provider-api-key')!;
+  const apiKeyLabel = container.querySelector<HTMLElement>('#api-key-label')!;
+  const validateBtn = container.querySelector<HTMLButtonElement>('#validate-provider-key')!;
+  const keyStatus = container.querySelector<HTMLElement>('#provider-key-status')!;
+  const languageSelect = container.querySelector<HTMLSelectElement>('#language-select')!;
+
+  providerSelect.addEventListener('change', () => {
+    const provider = providerSelect.value as ProviderName;
+    data.settings.aiProvider = provider;
+    const existingKey = data.settings.providerApiKeys[provider] ?? '';
+    apiKeyInput.value = existingKey ? '••••••••' + existingKey.slice(-4) : '';
+    apiKeyLabel.textContent = `${PROVIDER_LABELS[provider]} API Key`;
+    apiKeyInput.placeholder = `Enter your ${PROVIDER_LABELS[provider]} API key`;
+    keyStatus.textContent = '';
+    onSave();
+  });
+
+  validateBtn.addEventListener('click', async () => {
+    const provider = providerSelect.value as ProviderName;
+    const existingKey = data.settings.providerApiKeys[provider] ?? '';
+    const rawValue = apiKeyInput.value;
+    const apiKey = rawValue.startsWith('••') ? existingKey : rawValue;
+
+    keyStatus.textContent = 'Validating...';
+    keyStatus.style.color = '#aaa';
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'validate-api-key',
+        apiKey,
+        provider,
+      });
+      const valid = response?.valid === true;
+      if (valid) {
+        data.settings.providerApiKeys[provider] = apiKey;
+        await saveStoredData(data);
+        keyStatus.textContent = 'Valid!';
+        keyStatus.style.color = '#4caf50';
+      } else {
+        keyStatus.textContent = 'Invalid key';
+        keyStatus.style.color = '#ef5350';
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Unknown error';
+      console.warn('[Reword] API key validation error:', detail);
+      keyStatus.textContent = `Validation failed: ${detail}`;
+      keyStatus.style.color = '#ef5350';
+    }
+  });
+
+  languageSelect.addEventListener('change', async () => {
+    data.settings.preferredLanguage = languageSelect.value;
+    await saveStoredData(data);
+  });
+}
+
+export function renderContactProfiles(container: HTMLElement, data: StoredData): void {
+  const profiles = data.contactProfiles;
+  const entries = Object.entries(profiles);
+
+  const tableHtml =
+    entries.length === 0
+      ? '<p class="hint" id="contact-profiles-empty">No contact profiles yet.</p>'
+      : `<table class="contact-profiles-table">
+          <thead>
+            <tr>
+              <th>Display Name</th>
+              <th>Platform ID</th>
+              <th>Relationship</th>
+              <th>Tone Goal</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${entries
+              .map(
+                ([platformId, profile]) => `
+              <tr data-platform-id="${esc(platformId)}">
+                <td>${esc(profile.displayName)}</td>
+                <td>${esc(platformId)}</td>
+                <td>${esc(profile.relationshipType)}</td>
+                <td>${esc(profile.toneGoal)}</td>
+                <td>
+                  <button class="contact-delete-btn" data-platform-id="${esc(platformId)}">Delete</button>
+                </td>
+              </tr>
+            `,
+              )
+              .join('')}
+          </tbody>
+        </table>`;
+
+  container.innerHTML = `
+    <div id="contact-profiles-list">${tableHtml}</div>
+    <div id="add-contact-form" style="display:none" class="add-contact-form">
+      <div class="field">
+        <label>Platform ID (e.g. gmail:jane@example.com)</label>
+        <input type="text" id="contact-platform-id" placeholder="e.g. gmail:jane@example.com">
+      </div>
+      <div class="field">
+        <label>Display Name</label>
+        <input type="text" id="contact-display-name" placeholder="e.g. Jane">
+      </div>
+      <div class="field">
+        <label>Relationship Type</label>
+        <select id="contact-relationship">
+          <option value="workplace">Workplace</option>
+          <option value="romantic">Romantic</option>
+          <option value="family">Family</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Sensitivity</label>
+        <select id="contact-sensitivity">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Tone Goal</label>
+        <input type="text" id="contact-tone-goal" placeholder="e.g. more formal, match their energy">
+      </div>
+      <div class="field">
+        <label>Cultural Context</label>
+        <input type="text" id="contact-cultural-context" placeholder="e.g. prefers direct communication">
+      </div>
+      <button id="save-contact-profile">Save Contact</button>
+      <button id="cancel-add-contact" class="btn-secondary">Cancel</button>
+    </div>
+    <button id="show-add-contact-form">Add Contact</button>
+  `;
+
+  // Wire delete buttons
+  container.querySelectorAll<HTMLElement>('.contact-delete-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const platformId = btn.dataset.platformId!;
+      await chrome.runtime.sendMessage({ type: 'delete-contact-profile', platformId });
+      delete data.contactProfiles[platformId];
+      renderContactProfiles(container, data);
+    });
+  });
+
+  // Show/hide add form
+  const addForm = container.querySelector<HTMLElement>('#add-contact-form')!;
+  const showFormBtn = container.querySelector<HTMLElement>('#show-add-contact-form')!;
+  const cancelBtn = container.querySelector<HTMLElement>('#cancel-add-contact')!;
+
+  showFormBtn.addEventListener('click', () => {
+    addForm.style.display = 'block';
+    showFormBtn.style.display = 'none';
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    addForm.style.display = 'none';
+    showFormBtn.style.display = 'block';
+  });
+
+  // Save new contact
+  container
+    .querySelector<HTMLElement>('#save-contact-profile')!
+    .addEventListener('click', async () => {
+      const platformId = container
+        .querySelector<HTMLInputElement>('#contact-platform-id')!
+        .value.trim();
+      const displayName = container
+        .querySelector<HTMLInputElement>('#contact-display-name')!
+        .value.trim();
+      const relationshipType = container.querySelector<HTMLSelectElement>('#contact-relationship')!
+        .value as 'romantic' | 'workplace' | 'family';
+      const sensitivity = container.querySelector<HTMLSelectElement>('#contact-sensitivity')!
+        .value as 'low' | 'medium' | 'high';
+      const toneGoal = container
+        .querySelector<HTMLInputElement>('#contact-tone-goal')!
+        .value.trim();
+      const culturalContext = container
+        .querySelector<HTMLInputElement>('#contact-cultural-context')!
+        .value.trim();
+
+      if (!platformId) return;
+
+      const profile = {
+        displayName: displayName || platformId,
+        platformId,
+        relationshipType,
+        sensitivity,
+        toneGoal,
+        culturalContext,
+        createdAt: new Date().toISOString(),
+      };
+
+      await chrome.runtime.sendMessage({ type: 'save-contact-profile', profile });
+      data.contactProfiles[platformId] = profile;
+      renderContactProfiles(container, data);
+    });
+}
+
 export function renderAll(data: StoredData) {
-  const keyInput = document.getElementById('api-key') as HTMLInputElement;
-  if (data.settings.geminiApiKey) {
-    keyInput.value = '••••••••' + data.settings.geminiApiKey.slice(-4);
+  const providerContainer = document.getElementById('provider-section');
+  if (providerContainer) {
+    renderProviderSection(providerContainer, data, () => saveStoredData(data));
   }
 
   const sensitivitySelect = document.getElementById('sensitivity') as HTMLSelectElement;
@@ -199,4 +455,9 @@ export function renderAll(data: StoredData) {
   renderLearnedPreferences(data);
   renderStats(data);
   renderHistory(data);
+
+  const contactContainer = document.getElementById('contact-profiles-section');
+  if (contactContainer) {
+    renderContactProfiles(contactContainer, data);
+  }
 }

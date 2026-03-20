@@ -7,7 +7,8 @@ let mockStorage: ReturnType<typeof createMockChromeStorage>;
 
 function setupDOM() {
   document.body.innerHTML = `
-    <input id="api-key" type="password" />
+    <div id="provider-section"></div>
+    <div id="contact-profiles-section"></div>
     <select id="sensitivity">
       <option value="low">Low</option>
       <option value="medium" selected>Medium</option>
@@ -627,23 +628,33 @@ describe('renderAll()', () => {
   it('populates api-key input with masked key', async () => {
     const { renderAll } = await importRenderers();
     const data = makeData({
-      settings: { ...DEFAULT_STORED_DATA.settings, geminiApiKey: 'AIzaSyD12345678' },
+      settings: {
+        ...DEFAULT_STORED_DATA.settings,
+        aiProvider: 'gemini' as const,
+        providerApiKeys: { gemini: 'AIzaSyD12345678' },
+      },
     });
 
     renderAll(data);
 
-    const keyInput = document.getElementById('api-key') as HTMLInputElement;
+    const keyInput = document.getElementById('provider-api-key') as HTMLInputElement;
     expect(keyInput.value).toContain('••••••••');
     expect(keyInput.value).toContain('5678');
   });
 
   it('leaves api-key empty when no key is set', async () => {
     const { renderAll } = await importRenderers();
-    const data = makeData({ settings: { ...DEFAULT_STORED_DATA.settings, geminiApiKey: '' } });
+    const data = makeData({
+      settings: {
+        ...DEFAULT_STORED_DATA.settings,
+        aiProvider: 'gemini' as const,
+        providerApiKeys: { gemini: '' },
+      },
+    });
 
     renderAll(data);
 
-    const keyInput = document.getElementById('api-key') as HTMLInputElement;
+    const keyInput = document.getElementById('provider-api-key') as HTMLInputElement;
     expect(keyInput.value).toBe('');
   });
 
