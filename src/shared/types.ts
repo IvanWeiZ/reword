@@ -18,10 +18,13 @@ export interface StoredData {
   weeklyStats: WeeklyStats;
   previousWeeklyStats: WeeklyStats | null;
   lastWeeklySummaryShown: string;
+  contactProfiles: Record<string, ContactProfile>;
 }
 
 export interface Settings {
-  geminiApiKey: string;
+  aiProvider: ProviderName;
+  providerApiKeys: Record<string, string>;
+  preferredLanguage: string;
   sensitivity: Sensitivity;
   enabledDomains: string[];
   customPatterns: string[];
@@ -69,6 +72,51 @@ export interface DismissedPattern {
   normalized: string;
   count: number;
   suppressed: boolean;
+}
+
+// --- Provider types ---
+export type ProviderName = 'gemini' | 'claude' | 'openai';
+
+export interface ContactProfile {
+  displayName: string;
+  platformId: string;
+  relationshipType: RelationshipType;
+  sensitivity: Sensitivity;
+  toneGoal: string;
+  culturalContext: string;
+  createdAt: string;
+}
+
+export type StreamCallback = (partialText: string) => void;
+
+export interface AIProvider {
+  name: ProviderName;
+  configure(apiKey: string): void;
+  isConfigured(): boolean;
+  analyze(
+    message: string,
+    relationshipType: RelationshipType,
+    sensitivity: Sensitivity,
+    threadContext: ThreadMessage[],
+    options?: AnalysisOptions,
+  ): Promise<AnalysisResult>;
+  analyzeStreaming(
+    message: string,
+    relationshipType: RelationshipType,
+    sensitivity: Sensitivity,
+    threadContext: ThreadMessage[],
+    onStream: StreamCallback,
+    signal?: AbortSignal,
+    options?: AnalysisOptions,
+  ): Promise<AnalysisResult>;
+  analyzeIncoming(message: string, threadContext: ThreadMessage[]): Promise<IncomingAnalysis>;
+  validateApiKey(apiKey: string): Promise<boolean>;
+}
+
+export interface AnalysisOptions {
+  personas?: RewritePersona[];
+  contactProfile?: ContactProfile;
+  preferredLanguage?: string;
 }
 
 // --- AI analysis types ---
@@ -130,6 +178,9 @@ export interface PlatformAdapter {
 
   /** Find the send button for intercept-on-send mode. */
   findSendButton?(): HTMLElement | null;
+
+  /** Get an identifier for the current recipient (e.g., email address, profile URL). */
+  getRecipientIdentifier?(): string | null;
 }
 
 // --- Message passing between content script and service worker ---
@@ -142,20 +193,24 @@ export type MessageToBackground =
       relationshipType: RelationshipType;
       sensitivity: Sensitivity;
       personas?: RewritePersona[];
-      recipientStyle?: string;
+      recipientId?: string;
+      preferredLanguage?: string;
     }
   | { type: 'analyze-incoming'; text: string; context: ThreadMessage[] }
   | { type: 'get-settings' }
   | { type: 'get-profile'; domain: string }
   | { type: 'increment-stat'; stat: keyof Stats }
-  | { type: 'validate-api-key'; apiKey: string }
+  | { type: 'validate-api-key'; apiKey: string; provider: ProviderName }
   | { type: 'record-flag'; event: FlagEvent }
   | { type: 'record-dismiss'; textSnippet: string; categories?: string[] }
   | { type: 'check-suppressed'; textSnippet: string }
   | { type: 'suppress-phrase'; text: string }
   | { type: 'remove-suppressed-phrase'; text: string }
   | { type: 'get-category-boosts' }
-  | { type: 'reset-learned-preferences' };
+  | { type: 'reset-learned-preferences' }
+  | { type: 'save-contact-profile'; profile: ContactProfile }
+  | { type: 'delete-contact-profile'; platformId: string }
+  | { type: 'get-contact-profiles' };
 
 export type MessageFromBackground =
   | { type: 'analysis-result'; result: AnalysisResult }
@@ -165,4 +220,5 @@ export type MessageFromBackground =
   | { type: 'validate-api-key-result'; valid: boolean }
   | { type: 'incoming-result'; result: IncomingAnalysis }
   | { type: 'suppression-result'; suppressed: boolean }
-  | { type: 'category-boosts'; boosts: Record<string, number> };
+  | { type: 'category-boosts'; boosts: Record<string, number> }
+  | { type: 'contact-profiles'; profiles: Record<string, ContactProfile> };
