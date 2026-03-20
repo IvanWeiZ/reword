@@ -30,7 +30,7 @@ test('options page is accessible', async () => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${id}/options/options.html`);
 
-  await expect(page.locator('#api-key')).toBeVisible();
+  await expect(page.locator('#provider-api-key')).toBeVisible();
   await expect(page.locator('#sensitivity')).toBeVisible();
   await page.close();
 });
