@@ -1,7 +1,7 @@
 import type { AnalysisResult, Theme } from '../shared/types';
 import type { ConversationHealthTracker } from './conversation-health';
 import { detectPlatformDarkMode } from './dark-mode-detect';
-import { renderDiffHTML } from './helpers';
+import { renderDiffHTML, escapeHTML } from './helpers';
 import { CooldownTracker } from './cooldown';
 
 interface PopupCardOptions {
@@ -149,20 +149,20 @@ export class PopupCard {
       ${cooldownBanner}
       <div class="reword-risk-indicator">
         <span class="reword-risk-dot" style="background:${dotColor}"></span>
-        <span>${RISK_LABELS[result.riskLevel] ?? this.cap(result.riskLevel)} — This might read as ${this.esc(result.explanation)}. Here are some alternatives:</span>
+        <span>${RISK_LABELS[result.riskLevel] ?? this.cap(result.riskLevel)} — This might read as ${escapeHTML(result.explanation)}. Here are some alternatives:</span>
       </div>
       <div class="reword-original">
         <div class="reword-original-label">Your message</div>
-        <div>${this.esc(originalText)}</div>
+        <div>${escapeHTML(originalText)}</div>
       </div>
       ${this.buildDetailsSection(result)}
-      <div class="reword-explanation">${this.esc(result.issues.join('. '))}</div>
+      <div class="reword-explanation">${escapeHTML(result.issues.join('. '))}</div>
       <div class="reword-rewrites">
         ${result.rewrites
           .map(
             (r, i) => `
           <div class="reword-rewrite-option" data-index="${i}">
-            <div class="reword-rewrite-label">${this.esc(r.label)}</div>
+            <div class="reword-rewrite-label">${escapeHTML(r.label)}</div>
             <div class="reword-rewrite-diff">${renderDiffHTML(originalText, r.text)}</div>
             <span class="reword-rewrite-shortcut">⌥${i + 1}</span>
           </div>
@@ -292,7 +292,7 @@ export class PopupCard {
 
     const issuesHtml =
       summary.topIssues.length > 0
-        ? `<div style="margin-top:4px">Top issues: ${summary.topIssues.map((i) => this.esc(i)).join(', ')}</div>`
+        ? `<div style="margin-top:4px">Top issues: ${summary.topIssues.map((i) => escapeHTML(i)).join(', ')}</div>`
         : '';
 
     return `
@@ -311,13 +311,13 @@ export class PopupCard {
 
   private buildDetailsSection(result: AnalysisResult): string {
     if (result.issues.length === 0) return '';
-    const issuesList = result.issues.map((issue) => `<li>${this.esc(issue)}</li>`).join('');
+    const issuesList = result.issues.map((issue) => `<li>${escapeHTML(issue)}</li>`).join('');
     return `
       <div class="reword-details">
         <button class="reword-details-toggle">Why was this flagged?</button>
         <div class="reword-details-content">
           <ul style="margin:0;padding-left:16px">${issuesList}</ul>
-          <p style="margin-top:8px">${this.esc(result.explanation)}</p>
+          <p style="margin-top:8px">${escapeHTML(result.explanation)}</p>
         </div>
       </div>
     `;
@@ -426,12 +426,6 @@ export class PopupCard {
     });
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 5000);
-  }
-
-  private esc(text: string): string {
-    const d = document.createElement('div');
-    d.textContent = text;
-    return d.innerHTML;
   }
 
   private cap(s: string): string {

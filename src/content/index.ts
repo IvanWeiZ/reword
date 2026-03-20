@@ -7,7 +7,7 @@ import type {
 import { MIN_MESSAGE_LENGTH, HEURISTIC_THRESHOLD, AI_DEBOUNCE_MS } from '../shared/constants';
 import { scoreMessage } from './heuristic-scorer';
 import { PopupCard } from './popup-card';
-import { normalizeSnippet, renderDiffHTML } from './helpers';
+import { normalizeSnippet, renderDiffHTML, escapeHTML } from './helpers';
 import {
   GmailAdapter,
   LinkedInAdapter,
@@ -91,13 +91,13 @@ function createWarningBanner(): {
       });
     },
     showAnalysis(result: AnalysisResult, originalText: string) {
-      const issueList = result.issues.map((i) => `<li>${i}</li>`).join('');
+      const issueList = result.issues.map((i) => `<li>${escapeHTML(i)}</li>`).join('');
       const rewriteButtons = result.rewrites
         .map(
           (r, i) => `
         <button class="reword-use-rewrite" data-index="${i}"
           style="background:white;color:#333;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;text-align:left;margin:4px 0;width:100%;">
-          <strong>${r.tone}:</strong> ${renderDiffHTML(originalText, r.text)}
+          <strong>${r.label}:</strong> ${renderDiffHTML(originalText, r.text)}
         </button>`,
         )
         .join('');
@@ -107,7 +107,7 @@ function createWarningBanner(): {
           <span style="font-size:24px;">⚠️</span>
           <div style="flex:1;">
             <div style="margin-bottom:8px;">
-              <strong>Tone issue detected:</strong> ${result.explanation || issueList}
+              <strong>Tone issue detected:</strong> ${escapeHTML(result.explanation) || issueList}
             </div>
             ${
               result.rewrites.length > 0
@@ -282,10 +282,8 @@ function init(): void {
 
   // Poll for input field
   setInterval(() => {
-    const input =
-      adapter.findInputField() ??
-      document.querySelector<HTMLElement>('[contenteditable="true"][role="textbox"]') ??
-      document.querySelector<HTMLElement>('[contenteditable="true"]');
+    if (cachedInput && document.contains(cachedInput)) return;
+    const input = adapter.findInputField();
     if (input && input !== cachedInput) {
       attachInputListener(input);
     }

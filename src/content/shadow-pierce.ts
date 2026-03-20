@@ -304,10 +304,6 @@ document.addEventListener(
   },
   true,
 );
-// selectionchange fires reliably on contenteditable even when input doesn't
-document.addEventListener('selectionchange', () => {
-  checkCurrentText();
-});
 // Also poll the editable text on a fast interval as ultimate fallback
 setInterval(() => {
   checkCurrentText();

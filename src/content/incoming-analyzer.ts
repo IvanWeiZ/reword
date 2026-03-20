@@ -6,6 +6,7 @@ import type {
   Theme,
 } from '../shared/types';
 import { INCOMING_CHECK_INTERVAL_MS } from '../shared/constants';
+import { escapeHTML } from './helpers';
 
 function sendMessage(msg: MessageToBackground): Promise<MessageFromBackground> {
   return chrome.runtime.sendMessage(msg);
@@ -14,29 +15,36 @@ function sendMessage(msg: MessageToBackground): Promise<MessageFromBackground> {
 /** Periodically check incoming messages for tone issues (#14). */
 export function startIncomingAnalysis(adapter: PlatformAdapter, _theme: Theme): void {
   const analyzed = new WeakSet<HTMLElement>();
+  let running = false;
 
   setInterval(async () => {
-    const elements = adapter.getIncomingMessageElements?.() ?? [];
-    for (const el of elements) {
-      if (analyzed.has(el)) continue;
-      analyzed.add(el);
-
-      const text = el.textContent?.trim();
-      if (!text || text.length < 10) continue;
-
+    if (running) return;
+    running = true;
+    try {
+      const elements = adapter.getIncomingMessageElements?.() ?? [];
       const context = adapter.scrapeThreadContext();
-      const response = await sendMessage({
-        type: 'analyze-incoming',
-        text,
-        context,
-      });
+      for (const el of elements) {
+        if (analyzed.has(el)) continue;
+        analyzed.add(el);
 
-      if (response.type !== 'incoming-result') continue;
-      const result = response.result;
-      if (result.riskLevel === 'low') continue;
+        const text = el.textContent?.trim();
+        if (!text || text.length < 10) continue;
 
-      const indicator = createIncomingIndicator(result);
-      adapter.placeIncomingIndicator?.(el, indicator);
+        const response = await sendMessage({
+          type: 'analyze-incoming',
+          text,
+          context,
+        });
+
+        if (response.type !== 'incoming-result') continue;
+        const result = response.result;
+        if (result.riskLevel === 'low') continue;
+
+        const indicator = createIncomingIndicator(result);
+        adapter.placeIncomingIndicator?.(el, indicator);
+      }
+    } finally {
+      running = false;
     }
   }, INCOMING_CHECK_INTERVAL_MS);
 }
@@ -66,8 +74,8 @@ function createIncomingIndicator(result: IncomingAnalysis): HTMLElement {
     tooltip.className = 'reword-incoming-tooltip';
     tooltip.innerHTML = `
       <div style="font-weight:600;margin-bottom:6px">Tone analysis</div>
-      <div style="margin-bottom:4px">${result.issues.map((i) => `<span>• ${i}</span>`).join('<br>')}</div>
-      <div style="margin-top:8px;font-style:italic">${result.interpretation}</div>
+      <div style="margin-bottom:4px">${result.issues.map((i) => `<span>• ${escapeHTML(i)}</span>`).join('<br>')}</div>
+      <div style="margin-top:8px;font-style:italic">${escapeHTML(result.interpretation)}</div>
     `;
     el.parentElement?.appendChild(tooltip);
     setTimeout(() => tooltip.remove(), 10000);

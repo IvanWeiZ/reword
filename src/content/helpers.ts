@@ -115,10 +115,12 @@ export function renderDiffHTML(original: string, rewritten: string): string {
     .join(' ');
 }
 
-function escapeHTML(text: string): string {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
+export function escapeHTML(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 /** Normalize text to a comparable snippet for learning mode (#6). */

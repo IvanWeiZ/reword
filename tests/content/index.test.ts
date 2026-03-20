@@ -310,6 +310,7 @@ describe('content script init() orchestration', () => {
     vi.doMock('../../src/content/helpers', () => ({
       normalizeSnippet: (text: string) => text.toLowerCase().slice(0, 60),
       deriveRecipientStyle: () => undefined,
+      escapeHTML: (text: string) => text,
       renderDiffHTML: (original: string, rewritten: string) =>
         `<span class="reword-diff-removed">${original}</span> <span class="reword-diff-added">${rewritten}</span>`,
     }));

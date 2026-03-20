@@ -12,7 +12,7 @@ export type { PlatformAdapter };
  * fallback for environments where execCommand is unavailable or fails.
  */
 /** Check whether an element is contentEditable. */
-function isContentEditable(element: HTMLElement): boolean {
+export function isContentEditable(element: HTMLElement): boolean {
   return element.isContentEditable === true || element.getAttribute('contenteditable') === 'true';
 }
 

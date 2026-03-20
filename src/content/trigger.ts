@@ -32,7 +32,6 @@ export class TriggerIcon {
   constructor(onClick: () => void) {
     this.onClick = onClick;
     this.element = document.createElement('div');
-    this.element.style.display = 'none';
     this.element.style.cursor = 'pointer';
     this.element.style.fontFamily = 'system-ui, sans-serif';
     this.element.style.fontSize = '12px';

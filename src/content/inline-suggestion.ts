@@ -7,6 +7,8 @@
  * is positioned near the bottom-right of the textarea instead.
  */
 
+import { isContentEditable } from '../adapters/base';
+
 function injectGhostStyles(): void {
   if (document.getElementById('reword-ghost-styles')) return;
   const style = document.createElement('style');
@@ -74,7 +76,7 @@ export class InlineSuggestion {
     this.rewriteText = rewrite;
     this.onAccept = onAccept;
 
-    if (this.isContentEditable(target)) {
+    if (isContentEditable(target)) {
       this.showGhostSpan(target, rewrite);
     } else {
       this.showTooltip(target, rewrite);
@@ -119,10 +121,6 @@ export class InlineSuggestion {
   }
 
   // --- Private helpers ---
-
-  private isContentEditable(el: HTMLElement): boolean {
-    return el.isContentEditable === true || el.getAttribute('contenteditable') === 'true';
-  }
 
   private showGhostSpan(target: HTMLElement, text: string): void {
     const span = document.createElement('span');

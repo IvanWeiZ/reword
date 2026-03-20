@@ -88,8 +88,8 @@ export class LinkedInAdapter implements PlatformAdapter {
     for (const el of messageEls) {
       const text = el.querySelector('.msg-s-event-listitem__body')?.textContent?.trim();
       if (!text) continue;
-      const isSelf = el.classList.contains('msg-s-event-listitem--other') ? 'other' : 'self';
-      messages.push({ sender: isSelf as 'self' | 'other', text: text.slice(0, 500) });
+      const sender = el.classList.contains('msg-s-event-listitem--other') ? 'other' : 'self';
+      messages.push({ sender, text: text.slice(0, 500) });
     }
     return messages.slice(-10);
   }

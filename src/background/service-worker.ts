@@ -226,7 +226,6 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
         data.stats.totalAnalyzed++;
         data.stats.monthlyApiCalls++;
         data.weeklyStats.analyzed++;
-        await saveStoredData(data);
 
         const result = await gemini.analyze(
           message.text,
@@ -242,8 +241,9 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
         if (result.shouldFlag) {
           data.stats.totalFlagged++;
           data.weeklyStats.flagged++;
-          await saveStoredData(data);
         }
+
+        await saveStoredData(data);
 
         return { type: 'analysis-result', result };
       } catch (error) {
