@@ -265,4 +265,243 @@ describe('PopupCard', () => {
     undoBtn?.click();
     expect(onUndo).toHaveBeenCalled();
   });
+
+  // ── Save profile inline form (lines 428–485) ───────────────
+
+  describe('save profile inline form', () => {
+    beforeEach(() => {
+      (globalThis as any).chrome = {
+        runtime: {
+          sendMessage: vi.fn().mockResolvedValue({}),
+          onMessage: { addListener: vi.fn() },
+        },
+      };
+    });
+
+    it('renders save-profile link when recipientId is set', () => {
+      card.recipientId = 'gmail:jane@example.com';
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+      const link = card.element.querySelector('.reword-save-profile-link');
+      expect(link).not.toBeNull();
+      expect(link!.textContent).toContain('Save tone preferences');
+    });
+
+    it('does not render save-profile link when recipientId is null', () => {
+      card.recipientId = null;
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+      const link = card.element.querySelector('.reword-save-profile-link');
+      expect(link).toBeNull();
+    });
+
+    it('does not render save-profile link when contact is already saved', () => {
+      card.recipientId = 'gmail:jane@example.com';
+      card.markContactSaved('gmail:jane@example.com');
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+      const link = card.element.querySelector('.reword-save-profile-link');
+      expect(link).toBeNull();
+    });
+
+    it('clicking save-profile link shows form and hides link', () => {
+      card.recipientId = 'gmail:jane@example.com';
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+
+      const link = card.element.querySelector<HTMLElement>('.reword-save-profile-link')!;
+      const form = card.element.querySelector<HTMLElement>('.reword-save-profile-form')!;
+
+      expect(form.style.display).toBe('none');
+      link.click();
+      expect(form.style.display).toBe('block');
+      expect(link.style.display).toBe('none');
+    });
+
+    it('clicking cancel hides form and shows link', () => {
+      card.recipientId = 'gmail:jane@example.com';
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+
+      const link = card.element.querySelector<HTMLElement>('.reword-save-profile-link')!;
+      const form = card.element.querySelector<HTMLElement>('.reword-save-profile-form')!;
+      const cancelBtn = card.element.querySelector<HTMLElement>('.reword-save-profile-cancel')!;
+
+      link.click();
+      expect(form.style.display).toBe('block');
+
+      cancelBtn.click();
+      expect(form.style.display).toBe('none');
+      expect(link.style.display).toBe('block');
+    });
+
+    it('pre-populates display name from recipientId (email part before @)', () => {
+      card.recipientId = 'gmail:jane@example.com';
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+
+      const nameInput = card.element.querySelector<HTMLInputElement>(
+        '.reword-profile-display-name',
+      )!;
+      expect(nameInput.value).toBe('jane');
+    });
+
+    it('pre-populates display name from recipientId without @ (e.g. linkedin)', () => {
+      card.recipientId = 'linkedin:john-doe';
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+
+      const nameInput = card.element.querySelector<HTMLInputElement>(
+        '.reword-profile-display-name',
+      )!;
+      expect(nameInput.value).toBe('john-doe');
+    });
+
+    it('saves profile via chrome.runtime.sendMessage on form submit', async () => {
+      card.recipientId = 'gmail:jane@example.com';
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+
+      // Fill in form fields
+      card.element.querySelector<HTMLInputElement>('.reword-profile-display-name')!.value =
+        'Jane Smith';
+      card.element.querySelector<HTMLSelectElement>('.reword-profile-relationship')!.value =
+        'family';
+      card.element.querySelector<HTMLSelectElement>('.reword-profile-sensitivity')!.value = 'high';
+      card.element.querySelector<HTMLInputElement>('.reword-profile-tone-goal')!.value = 'be warm';
+      card.element.querySelector<HTMLInputElement>('.reword-profile-cultural-context')!.value =
+        'indirect';
+
+      // Click save
+      card.element.querySelector<HTMLElement>('.reword-save-profile-btn')!.click();
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'save-contact-profile',
+          profile: expect.objectContaining({
+            displayName: 'Jane Smith',
+            platformId: 'gmail:jane@example.com',
+            relationshipType: 'family',
+            sensitivity: 'high',
+            toneGoal: 'be warm',
+            culturalContext: 'indirect',
+          }),
+        }),
+      );
+    });
+
+    it('removes form elements after successful save', async () => {
+      card.recipientId = 'gmail:jane@example.com';
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+
+      card.element.querySelector<HTMLElement>('.reword-save-profile-btn')!.click();
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(card.element.querySelector('.reword-save-profile-form')).toBeNull();
+      expect(card.element.querySelector('.reword-save-profile-link')).toBeNull();
+    });
+
+    it('uses platformId as displayName when display name input is empty', async () => {
+      card.recipientId = 'gmail:jane@example.com';
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+
+      card.element.querySelector<HTMLInputElement>('.reword-profile-display-name')!.value = '  ';
+
+      card.element.querySelector<HTMLElement>('.reword-save-profile-btn')!.click();
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          profile: expect.objectContaining({
+            displayName: 'gmail:jane@example.com',
+          }),
+        }),
+      );
+    });
+
+    it('does not save when recipientId is null', async () => {
+      card.recipientId = 'gmail:test@example.com';
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+      // Clear recipientId after rendering the form
+      card.recipientId = null;
+
+      card.element.querySelector<HTMLElement>('.reword-save-profile-btn')!.click();
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'save-contact-profile' }),
+      );
+    });
+  });
+
+  // ── Suppress link (line 414-420) ────────────────────────────
+
+  describe('suppress link', () => {
+    it('renders suppress link', () => {
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+      const suppressLink = card.element.querySelector('.reword-suppress-link');
+      expect(suppressLink).not.toBeNull();
+      expect(suppressLink!.textContent).toContain("Don't flag this again");
+    });
+
+    it('calls onSuppress with original text and hides card', () => {
+      const onSuppress = vi.fn();
+      const cardWithSuppress = new PopupCard({
+        onRewrite,
+        onDismiss,
+        onUndo,
+        onSuppress,
+      });
+      document.body.appendChild(cardWithSuppress.element);
+
+      cardWithSuppress.show(MOCK_FLAGGED_RESULT, 'test message');
+      cardWithSuppress.element.querySelector<HTMLElement>('.reword-suppress-link')!.click();
+
+      expect(onSuppress).toHaveBeenCalledWith('test message');
+      expect(cardWithSuppress.element.style.display).toBe('none');
+    });
+  });
+
+  // ── Theme switching (isDark logic) ──────────────────────────
+
+  describe('theme switching', () => {
+    it('isDark returns true when theme is dark', () => {
+      card.setTheme('dark');
+      expect(card.isDark()).toBe(true);
+    });
+
+    it('isDark returns false when theme is light', () => {
+      card.setTheme('light');
+      expect(card.isDark()).toBe(false);
+    });
+
+    it('updates CSS when theme changes', () => {
+      card.setTheme('light');
+      const style = document.getElementById('reword-popup-styles');
+      expect(style).not.toBeNull();
+      const cssText = style!.textContent!;
+      // Light theme uses white background
+      expect(cssText).toContain('#ffffff');
+
+      card.setTheme('dark');
+      const darkCss = style!.textContent!;
+      // Dark theme uses dark background
+      expect(darkCss).toContain('#1e1e2e');
+    });
+  });
+
+  // ── cap() method (line 547) ─────────────────────────────────
+
+  describe('risk level display', () => {
+    it('capitalizes unknown risk levels via cap()', () => {
+      // Use a result with a non-standard risk level to trigger the cap() fallback
+      const customResult = {
+        ...MOCK_FLAGGED_RESULT,
+        riskLevel: 'critical' as any,
+      };
+      card.show(customResult, 'Whatever');
+      const indicator = card.element.querySelector('.reword-risk-indicator');
+      expect(indicator!.textContent).toContain('Critical');
+    });
+
+    it('uses RISK_LABELS for known risk levels', () => {
+      card.show(MOCK_FLAGGED_RESULT, 'Whatever');
+      const indicator = card.element.querySelector('.reword-risk-indicator');
+      // medium maps to 'Moderate'
+      expect(indicator!.textContent).toContain('Moderate');
+    });
+  });
 });

@@ -696,6 +696,31 @@ describe('renderAll()', () => {
     expect(checkbox.checked).toBe(true);
   });
 
+  it('renders contact profiles section when container exists', async () => {
+    const { renderAll } = await importRenderers();
+    const data = makeData({
+      contactProfiles: {
+        'gmail:jane@example.com': {
+          displayName: 'Jane',
+          platformId: 'gmail:jane@example.com',
+          relationshipType: 'workplace',
+          sensitivity: 'medium',
+          toneGoal: 'be formal',
+          culturalContext: 'prefers direct communication',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+      },
+    });
+
+    renderAll(data);
+
+    const container = document.getElementById('contact-profiles-section')!;
+    expect(container.textContent).toContain('Jane');
+    expect(container.textContent).toContain('gmail:jane@example.com');
+    expect(container.textContent).toContain('workplace');
+    expect(container.textContent).toContain('be formal');
+  });
+
   it('renders all sub-sections (profiles, domains, patterns, personas, stats, history)', async () => {
     const { renderAll } = await importRenderers();
     const data = makeData({
@@ -739,5 +764,372 @@ describe('renderAll()', () => {
     expect(document.getElementById('personas-list')!.textContent).toContain('Friendly');
     expect(document.getElementById('stats')!.textContent).toContain('50');
     expect(document.getElementById('history')!.textContent).toContain('twitter');
+  });
+});
+
+// ── renderContactProfiles() ─────────────────────────────────────────
+
+describe('renderContactProfiles()', () => {
+  it('renders contact profile table with all fields', async () => {
+    const { renderContactProfiles } = await importRenderers();
+    const container = document.getElementById('contact-profiles-section')!;
+    const data = makeData({
+      contactProfiles: {
+        'gmail:jane@example.com': {
+          displayName: 'Jane',
+          platformId: 'gmail:jane@example.com',
+          relationshipType: 'workplace',
+          sensitivity: 'medium',
+          toneGoal: 'more formal',
+          culturalContext: 'prefers direct communication',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+        'linkedin:john-doe': {
+          displayName: 'John',
+          platformId: 'linkedin:john-doe',
+          relationshipType: 'family',
+          sensitivity: 'high',
+          toneGoal: 'warm and supportive',
+          culturalContext: '',
+          createdAt: '2026-02-15T00:00:00Z',
+        },
+      },
+    });
+
+    renderContactProfiles(container, data);
+
+    const table = container.querySelector('.contact-profiles-table');
+    expect(table).not.toBeNull();
+    const rows = container.querySelectorAll('tbody tr');
+    expect(rows.length).toBe(2);
+
+    expect(container.textContent).toContain('Jane');
+    expect(container.textContent).toContain('gmail:jane@example.com');
+    expect(container.textContent).toContain('workplace');
+    expect(container.textContent).toContain('more formal');
+
+    expect(container.textContent).toContain('John');
+    expect(container.textContent).toContain('linkedin:john-doe');
+    expect(container.textContent).toContain('family');
+    expect(container.textContent).toContain('warm and supportive');
+  });
+
+  it('renders empty state when no contact profiles exist', async () => {
+    const { renderContactProfiles } = await importRenderers();
+    const container = document.getElementById('contact-profiles-section')!;
+    const data = makeData({ contactProfiles: {} });
+
+    renderContactProfiles(container, data);
+
+    const emptyMsg = container.querySelector('#contact-profiles-empty');
+    expect(emptyMsg).not.toBeNull();
+    expect(emptyMsg!.textContent).toContain('No contact profiles yet');
+    expect(container.querySelector('.contact-profiles-table')).toBeNull();
+  });
+
+  it('delete button removes contact profile and re-renders', async () => {
+    const { renderContactProfiles } = await importRenderers();
+    const container = document.getElementById('contact-profiles-section')!;
+    const data = makeData({
+      contactProfiles: {
+        'gmail:jane@example.com': {
+          displayName: 'Jane',
+          platformId: 'gmail:jane@example.com',
+          relationshipType: 'workplace',
+          sensitivity: 'medium',
+          toneGoal: '',
+          culturalContext: '',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+        'gmail:bob@example.com': {
+          displayName: 'Bob',
+          platformId: 'gmail:bob@example.com',
+          relationshipType: 'family',
+          sensitivity: 'low',
+          toneGoal: '',
+          culturalContext: '',
+          createdAt: '2026-01-02T00:00:00Z',
+        },
+      },
+    });
+
+    renderContactProfiles(container, data);
+
+    const deleteBtn = container.querySelector(
+      '.contact-delete-btn[data-platform-id="gmail:jane@example.com"]',
+    ) as HTMLElement;
+    expect(deleteBtn).not.toBeNull();
+    deleteBtn.click();
+    await tick();
+
+    // Profile removed from data
+    expect(data.contactProfiles['gmail:jane@example.com']).toBeUndefined();
+    expect(data.contactProfiles['gmail:bob@example.com']).toBeDefined();
+
+    // chrome.runtime.sendMessage called with delete message
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+      type: 'delete-contact-profile',
+      platformId: 'gmail:jane@example.com',
+    });
+
+    // Re-rendered with only one row
+    expect(container.querySelectorAll('tbody tr').length).toBe(1);
+    expect(container.textContent).not.toContain('Jane');
+    expect(container.textContent).toContain('Bob');
+  });
+
+  it('show/hide add contact form', async () => {
+    const { renderContactProfiles } = await importRenderers();
+    const container = document.getElementById('contact-profiles-section')!;
+    const data = makeData({ contactProfiles: {} });
+
+    renderContactProfiles(container, data);
+
+    const addForm = container.querySelector<HTMLElement>('#add-contact-form')!;
+    const showFormBtn = container.querySelector<HTMLElement>('#show-add-contact-form')!;
+    const cancelBtn = container.querySelector<HTMLElement>('#cancel-add-contact')!;
+
+    // Initially hidden
+    expect(addForm.style.display).toBe('none');
+
+    // Click "Add Contact" shows form and hides button
+    showFormBtn.click();
+    expect(addForm.style.display).toBe('block');
+    expect(showFormBtn.style.display).toBe('none');
+
+    // Click "Cancel" hides form and shows button
+    cancelBtn.click();
+    expect(addForm.style.display).toBe('none');
+    expect(showFormBtn.style.display).toBe('block');
+  });
+
+  it('saves new contact profile via form', async () => {
+    const { renderContactProfiles } = await importRenderers();
+    const container = document.getElementById('contact-profiles-section')!;
+    const data = makeData({ contactProfiles: {} });
+
+    renderContactProfiles(container, data);
+
+    // Fill in the form
+    container.querySelector<HTMLInputElement>('#contact-platform-id')!.value =
+      'gmail:new@example.com';
+    container.querySelector<HTMLInputElement>('#contact-display-name')!.value = 'New Contact';
+    container.querySelector<HTMLSelectElement>('#contact-relationship')!.value = 'romantic';
+    container.querySelector<HTMLSelectElement>('#contact-sensitivity')!.value = 'high';
+    container.querySelector<HTMLInputElement>('#contact-tone-goal')!.value = 'be gentle';
+    container.querySelector<HTMLInputElement>('#contact-cultural-context')!.value =
+      'indirect style';
+
+    // Submit
+    container.querySelector<HTMLElement>('#save-contact-profile')!.click();
+    await tick();
+
+    // Profile saved to data
+    expect(data.contactProfiles['gmail:new@example.com']).toBeDefined();
+    expect(data.contactProfiles['gmail:new@example.com'].displayName).toBe('New Contact');
+    expect(data.contactProfiles['gmail:new@example.com'].relationshipType).toBe('romantic');
+    expect(data.contactProfiles['gmail:new@example.com'].sensitivity).toBe('high');
+    expect(data.contactProfiles['gmail:new@example.com'].toneGoal).toBe('be gentle');
+    expect(data.contactProfiles['gmail:new@example.com'].culturalContext).toBe('indirect style');
+
+    // chrome.runtime.sendMessage called
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'save-contact-profile',
+        profile: expect.objectContaining({
+          displayName: 'New Contact',
+          platformId: 'gmail:new@example.com',
+          relationshipType: 'romantic',
+        }),
+      }),
+    );
+
+    // Re-rendered with the new profile
+    expect(container.textContent).toContain('New Contact');
+  });
+
+  it('uses platformId as displayName when displayName is empty', async () => {
+    const { renderContactProfiles } = await importRenderers();
+    const container = document.getElementById('contact-profiles-section')!;
+    const data = makeData({ contactProfiles: {} });
+
+    renderContactProfiles(container, data);
+
+    container.querySelector<HTMLInputElement>('#contact-platform-id')!.value =
+      'gmail:test@example.com';
+    container.querySelector<HTMLInputElement>('#contact-display-name')!.value = '';
+
+    container.querySelector<HTMLElement>('#save-contact-profile')!.click();
+    await tick();
+
+    expect(data.contactProfiles['gmail:test@example.com'].displayName).toBe(
+      'gmail:test@example.com',
+    );
+  });
+
+  it('does not save contact profile when platformId is empty', async () => {
+    const { renderContactProfiles } = await importRenderers();
+    const container = document.getElementById('contact-profiles-section')!;
+    const data = makeData({ contactProfiles: {} });
+
+    renderContactProfiles(container, data);
+
+    container.querySelector<HTMLInputElement>('#contact-platform-id')!.value = '  ';
+    container.querySelector<HTMLInputElement>('#contact-display-name')!.value = 'NoId';
+
+    container.querySelector<HTMLElement>('#save-contact-profile')!.click();
+    await tick();
+
+    expect(Object.keys(data.contactProfiles).length).toBe(0);
+    expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'save-contact-profile' }),
+    );
+  });
+
+  it('escapes HTML in contact profile display name and tone goal cells', async () => {
+    const { renderContactProfiles } = await importRenderers();
+    const container = document.getElementById('contact-profiles-section')!;
+    const data = makeData({
+      contactProfiles: {
+        'test-id': {
+          displayName: '<img src=x onerror=alert(1)>',
+          platformId: 'test-id',
+          relationshipType: 'workplace',
+          sensitivity: 'medium',
+          toneGoal: '<b>bold</b>',
+          culturalContext: '',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+      },
+    });
+
+    renderContactProfiles(container, data);
+
+    // Table cell content is escaped via esc()
+    const cells = container.querySelectorAll('td');
+    // displayName cell
+    expect(cells[0].innerHTML).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    // toneGoal cell
+    expect(cells[3].innerHTML).toContain('&lt;b&gt;bold&lt;/b&gt;');
+    // Should not have injected actual HTML elements
+    expect(cells[0].querySelector('img')).toBeNull();
+  });
+});
+
+// ── renderSuppressedPhrases() ───────────────────────────────────────
+
+describe('renderSuppressedPhrases()', () => {
+  it('renders suppressed phrases with SuppressionRecord format', async () => {
+    const { renderSuppressedPhrases } = await importRenderers();
+    const data = makeData({
+      settings: {
+        ...DEFAULT_STORED_DATA.settings,
+        suppressedPhrases: [
+          { phrase: 'whatever works', recipientId: null },
+          { phrase: 'fine by me', recipientId: 'gmail:jane@example.com' },
+        ],
+      },
+    });
+
+    renderSuppressedPhrases(data);
+
+    const list = document.getElementById('suppressed-list')!;
+    expect(list.querySelectorAll('.suppressed-item').length).toBe(2);
+    expect(list.textContent).toContain('whatever works');
+    expect(list.textContent).toContain('fine by me');
+  });
+
+  it('renders empty state when no suppressed phrases exist', async () => {
+    const { renderSuppressedPhrases } = await importRenderers();
+    const data = makeData({
+      settings: { ...DEFAULT_STORED_DATA.settings, suppressedPhrases: [] },
+    });
+
+    renderSuppressedPhrases(data);
+
+    const list = document.getElementById('suppressed-list')!;
+    expect(list.querySelector('.hint')).not.toBeNull();
+    expect(list.textContent).toContain('No suppressed phrases yet');
+  });
+
+  it('remove button deletes suppressed phrase and re-renders', async () => {
+    const { renderSuppressedPhrases } = await importRenderers();
+    const data = makeData({
+      settings: {
+        ...DEFAULT_STORED_DATA.settings,
+        suppressedPhrases: [
+          { phrase: 'keep this', recipientId: null },
+          { phrase: 'remove this', recipientId: null },
+        ],
+      },
+    });
+    await mockStorage.local.set({ reword: data });
+
+    renderSuppressedPhrases(data);
+
+    const btn = document.querySelector('[data-remove-suppressed="1"]') as HTMLElement;
+    btn.click();
+    await tick();
+
+    expect(data.settings.suppressedPhrases).toEqual([{ phrase: 'keep this', recipientId: null }]);
+
+    const list = document.getElementById('suppressed-list')!;
+    expect(list.querySelectorAll('.suppressed-item').length).toBe(1);
+    expect(list.textContent).toContain('keep this');
+    expect(list.textContent).not.toContain('remove this');
+  });
+});
+
+// ── renderLearnedPreferences() ──────────────────────────────────────
+
+describe('renderLearnedPreferences()', () => {
+  it('renders empty state when no learned preferences exist', async () => {
+    const { renderLearnedPreferences } = await importRenderers();
+    const data = makeData({
+      stats: { ...DEFAULT_STORED_DATA.stats, dismissedCategories: {} },
+    });
+
+    renderLearnedPreferences(data);
+
+    const container = document.getElementById('learned-preferences')!;
+    expect(container.querySelector('.hint')).not.toBeNull();
+    expect(container.textContent).toContain('No learned preferences yet');
+  });
+
+  it('renders singular "dismiss" when count is 1', async () => {
+    const { renderLearnedPreferences } = await importRenderers();
+    const data = makeData({
+      stats: { ...DEFAULT_STORED_DATA.stats, dismissedCategories: { sarcasm: 1 } },
+    });
+
+    renderLearnedPreferences(data);
+
+    const container = document.getElementById('learned-preferences')!;
+    expect(container.textContent).toContain('sarcasm: 1 dismiss');
+    expect(container.textContent).not.toContain('1 dismisses');
+  });
+
+  it('renders plural "dismisses" when count > 1', async () => {
+    const { renderLearnedPreferences } = await importRenderers();
+    const data = makeData({
+      stats: { ...DEFAULT_STORED_DATA.stats, dismissedCategories: { sarcasm: 2 } },
+    });
+
+    renderLearnedPreferences(data);
+
+    const container = document.getElementById('learned-preferences')!;
+    expect(container.textContent).toContain('sarcasm: 2 dismisses');
+  });
+
+  it('shows threshold raised when count >= DISMISS_SUPPRESS_THRESHOLD', async () => {
+    const { renderLearnedPreferences } = await importRenderers();
+    const data = makeData({
+      stats: { ...DEFAULT_STORED_DATA.stats, dismissedCategories: { passive: 3 } },
+    });
+
+    renderLearnedPreferences(data);
+
+    const container = document.getElementById('learned-preferences')!;
+    expect(container.textContent).toContain('(threshold raised)');
   });
 });

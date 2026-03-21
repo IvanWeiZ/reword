@@ -146,6 +146,90 @@ describe('TwitterAdapter', () => {
     expect(context.every((m) => m.sender === 'other')).toBe(true);
   });
 
+  describe('getRecipientIdentifier', () => {
+    it('returns prefixed name when conversation header span exists', () => {
+      document.body.innerHTML += `
+        <div data-testid="conversation-header">
+          <span>Alice Johnson</span>
+        </div>
+      `;
+      expect(adapter.getRecipientIdentifier()).toBe('twitter:Alice Johnson');
+    });
+
+    it('returns null when conversation header is missing', () => {
+      document.body.innerHTML = '<div>No header</div>';
+      expect(adapter.getRecipientIdentifier()).toBeNull();
+    });
+
+    it('returns null when conversation header has no span', () => {
+      document.body.innerHTML = '<div data-testid="conversation-header"></div>';
+      expect(adapter.getRecipientIdentifier()).toBeNull();
+    });
+
+    it('trims whitespace from name', () => {
+      document.body.innerHTML += `
+        <div data-testid="conversation-header">
+          <span>  Bob  </span>
+        </div>
+      `;
+      expect(adapter.getRecipientIdentifier()).toBe('twitter:Bob');
+    });
+  });
+
+  describe('getIncomingMessageElements', () => {
+    it('returns message entry elements', () => {
+      document.body.innerHTML = `
+        <div data-testid="messageEntry">msg1</div>
+        <div data-testid="messageEntry">msg2</div>
+        <div data-testid="messageEntry">msg3</div>
+      `;
+      const els = adapter.getIncomingMessageElements();
+      expect(els.length).toBe(3);
+    });
+
+    it('limits to last 5 elements', () => {
+      let html = '';
+      for (let i = 0; i < 10; i++) {
+        html += `<div data-testid="messageEntry">msg${i}</div>`;
+      }
+      document.body.innerHTML = html;
+      const els = adapter.getIncomingMessageElements();
+      expect(els.length).toBe(5);
+    });
+
+    it('returns empty array when no message entries exist', () => {
+      document.body.innerHTML = '<div>Nothing</div>';
+      expect(adapter.getIncomingMessageElements()).toEqual([]);
+    });
+  });
+
+  describe('placeIncomingIndicator', () => {
+    it('places indicator inside tweetText and returns cleanup', () => {
+      const messageEl = document.createElement('div');
+      const tweetText = document.createElement('div');
+      tweetText.setAttribute('data-testid', 'tweetText');
+      tweetText.textContent = 'Hello!';
+      messageEl.appendChild(tweetText);
+
+      const indicator = document.createElement('span');
+      indicator.id = 'test-indicator';
+      const cleanup = adapter.placeIncomingIndicator(messageEl, indicator);
+
+      expect(cleanup).not.toBeNull();
+      expect(tweetText.querySelector('#test-indicator')).not.toBeNull();
+      expect(indicator.style.display).toBe('inline-flex');
+
+      cleanup?.();
+      expect(tweetText.querySelector('#test-indicator')).toBeNull();
+    });
+
+    it('returns null when tweetText element is missing', () => {
+      const messageEl = document.createElement('div');
+      const indicator = document.createElement('span');
+      expect(adapter.placeIncomingIndicator(messageEl, indicator)).toBeNull();
+    });
+  });
+
   describe('checkHealth', () => {
     it('returns true when input and send button both exist', () => {
       expect(adapter.checkHealth()).toBe(true);

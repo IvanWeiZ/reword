@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { wordDiff, renderDiffHTML } from '../../src/content/helpers';
+import {
+  wordDiff,
+  renderDiffHTML,
+  normalizeSnippet,
+  deriveRecipientStyle,
+} from '../../src/content/helpers';
+import type { PlatformAdapter, ThreadMessage } from '../../src/shared/types';
 
 describe('wordDiff', () => {
   it('returns equal segments for identical text', () => {
@@ -118,5 +124,128 @@ describe('renderDiffHTML', () => {
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
     expect(html).toContain('&lt;div&gt;');
+  });
+});
+
+describe('normalizeSnippet', () => {
+  it('lowercases and trims normal text', () => {
+    expect(normalizeSnippet('  Hello World  ')).toBe('hello world');
+  });
+
+  it('removes special characters', () => {
+    expect(normalizeSnippet('Hello, World! How are you?')).toBe('hello world how are you');
+  });
+
+  it('truncates text longer than 60 characters', () => {
+    const longText = 'a'.repeat(100);
+    const result = normalizeSnippet(longText);
+    expect(result.length).toBe(60);
+  });
+
+  it('returns empty string for empty input', () => {
+    expect(normalizeSnippet('')).toBe('');
+  });
+
+  it('returns empty string for text with only special characters', () => {
+    expect(normalizeSnippet('!@#$%^&*()')).toBe('');
+  });
+
+  it('preserves digits', () => {
+    expect(normalizeSnippet('Order 12345!')).toBe('order 12345');
+  });
+
+  it('collapses to spaces after removing special chars', () => {
+    expect(normalizeSnippet('A--B..C')).toBe('abc');
+  });
+});
+
+describe('deriveRecipientStyle', () => {
+  function makeAdapter(messages: ThreadMessage[]): PlatformAdapter {
+    return {
+      platformName: 'test',
+      findInputField: () => null,
+      placeTriggerIcon: () => null,
+      writeBack: () => false,
+      checkHealth: () => true,
+      scrapeThreadContext: () => messages,
+    };
+  }
+
+  it('returns undefined when no other messages exist', () => {
+    const adapter = makeAdapter([]);
+    expect(deriveRecipientStyle(adapter)).toBeUndefined();
+  });
+
+  it('returns undefined when only self messages exist', () => {
+    const adapter = makeAdapter([{ sender: 'self', text: 'Hello there!' }]);
+    expect(deriveRecipientStyle(adapter)).toBeUndefined();
+  });
+
+  it('returns "brief" for short messages (avg < 30 chars)', () => {
+    const adapter = makeAdapter([
+      { sender: 'other', text: 'ok' },
+      { sender: 'other', text: 'sure' },
+    ]);
+    expect(deriveRecipientStyle(adapter)).toBe('brief');
+  });
+
+  it('returns "detailed" for long messages (avg > 150 chars)', () => {
+    const longMsg = 'a'.repeat(200);
+    const adapter = makeAdapter([{ sender: 'other', text: longMsg }]);
+    expect(deriveRecipientStyle(adapter)).toBe('detailed');
+  });
+
+  it('returns "uses emojis" when messages contain emojis', () => {
+    const adapter = makeAdapter([
+      {
+        sender: 'other',
+        text: 'This is a medium length message that is not brief at all and has enough chars \u{1F600}',
+      },
+    ]);
+    expect(deriveRecipientStyle(adapter)).toBe('uses emojis');
+  });
+
+  it('returns "expressive" when messages contain exclamation marks', () => {
+    const adapter = makeAdapter([
+      {
+        sender: 'other',
+        text: 'This is a medium length message that is not brief at all and has enough chars!',
+      },
+    ]);
+    expect(deriveRecipientStyle(adapter)).toBe('expressive');
+  });
+
+  it('returns undefined for medium-length messages without emojis or exclamation', () => {
+    const adapter = makeAdapter([
+      {
+        sender: 'other',
+        text: 'This is a medium length message that is not brief at all and has enough chars.',
+      },
+    ]);
+    expect(deriveRecipientStyle(adapter)).toBeUndefined();
+  });
+
+  it('combines brief + uses emojis', () => {
+    const adapter = makeAdapter([{ sender: 'other', text: 'ok \u{1F600}' }]);
+    expect(deriveRecipientStyle(adapter)).toBe('brief, uses emojis');
+  });
+
+  it('combines brief + expressive', () => {
+    const adapter = makeAdapter([{ sender: 'other', text: 'yes!' }]);
+    expect(deriveRecipientStyle(adapter)).toBe('brief, expressive');
+  });
+
+  it('combines detailed + uses emojis + expressive', () => {
+    const longMsg = 'a'.repeat(160) + '! \u{1F600}';
+    const adapter = makeAdapter([{ sender: 'other', text: longMsg }]);
+    expect(deriveRecipientStyle(adapter)).toBe('detailed, uses emojis, expressive');
+  });
+
+  it('ignores self messages when computing style', () => {
+    const adapter = makeAdapter([
+      { sender: 'self', text: 'My long detailed message with lots of words' },
+      { sender: 'other', text: 'ok' },
+    ]);
+    expect(deriveRecipientStyle(adapter)).toBe('brief');
   });
 });

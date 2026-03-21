@@ -48,6 +48,27 @@ describe('LinkedInAdapter', () => {
     expect(adapter.placeTriggerIcon(icon)).toBeNull();
   });
 
+  it('placeTriggerIcon falls back to placing near input when no actions row exists', () => {
+    document.body.innerHTML = `
+      <div>
+        <div role="textbox" contenteditable="true" class="msg-form__msg-content-container--scrollable">
+          <p>Some text</p>
+        </div>
+      </div>
+    `;
+    const icon = document.createElement('div');
+    icon.id = 'reword-trigger-fallback';
+    const cleanup = adapter.placeTriggerIcon(icon);
+    expect(cleanup).not.toBeNull();
+    expect(document.getElementById('reword-trigger-fallback')).not.toBeNull();
+    expect(icon.style.position).toBe('absolute');
+    expect(icon.style.right).toBe('8px');
+    expect(icon.style.top).toBe('8px');
+    // Verify cleanup removes it
+    cleanup?.();
+    expect(document.getElementById('reword-trigger-fallback')).toBeNull();
+  });
+
   it('writeBack returns false when no input exists', () => {
     document.body.innerHTML = '<div>empty</div>';
     expect(adapter.writeBack('test')).toBe(false);
@@ -160,6 +181,74 @@ describe('LinkedInAdapter', () => {
     it('returns null when entity title element has empty text', () => {
       document.body.innerHTML += `<div class="msg-entity-lockup__entity-title">   </div>`;
       expect(adapter.getRecipientIdentifier()).toBeNull();
+    });
+  });
+
+  describe('getIncomingMessageElements', () => {
+    it('returns only messages from others', () => {
+      document.body.innerHTML = `
+        <div class="msg-s-event-listitem msg-s-event-listitem--other">Other 1</div>
+        <div class="msg-s-event-listitem">Self 1</div>
+        <div class="msg-s-event-listitem msg-s-event-listitem--other">Other 2</div>
+      `;
+      const els = adapter.getIncomingMessageElements();
+      expect(els.length).toBe(2);
+    });
+
+    it('limits to last 5 incoming messages', () => {
+      let html = '';
+      for (let i = 0; i < 10; i++) {
+        html += `<div class="msg-s-event-listitem msg-s-event-listitem--other">Other ${i}</div>`;
+      }
+      document.body.innerHTML = html;
+      const els = adapter.getIncomingMessageElements();
+      expect(els.length).toBe(5);
+    });
+
+    it('returns empty array when no incoming messages exist', () => {
+      document.body.innerHTML = '<div>No messages</div>';
+      expect(adapter.getIncomingMessageElements()).toEqual([]);
+    });
+  });
+
+  describe('findSendButton', () => {
+    it('finds .msg-form__send-button', () => {
+      const btn = adapter.findSendButton();
+      expect(btn).not.toBeNull();
+      expect(btn?.classList.contains('msg-form__send-button')).toBe(true);
+    });
+
+    it('returns null when no send button exists', () => {
+      document.body.innerHTML = '<div>No button</div>';
+      expect(adapter.findSendButton()).toBeNull();
+    });
+  });
+
+  describe('placeIncomingIndicator', () => {
+    it('places indicator inside message body and returns cleanup', () => {
+      const messageEl = document.createElement('div');
+      messageEl.classList.add('msg-s-event-listitem');
+      const body = document.createElement('div');
+      body.classList.add('msg-s-event-listitem__body');
+      body.textContent = 'Some message';
+      messageEl.appendChild(body);
+
+      const indicator = document.createElement('span');
+      indicator.id = 'test-indicator';
+      const cleanup = adapter.placeIncomingIndicator(messageEl, indicator);
+
+      expect(cleanup).not.toBeNull();
+      expect(body.querySelector('#test-indicator')).not.toBeNull();
+      expect(indicator.style.display).toBe('inline-flex');
+
+      cleanup?.();
+      expect(body.querySelector('#test-indicator')).toBeNull();
+    });
+
+    it('returns null when message body element is missing', () => {
+      const messageEl = document.createElement('div');
+      const indicator = document.createElement('span');
+      expect(adapter.placeIncomingIndicator(messageEl, indicator)).toBeNull();
     });
   });
 
