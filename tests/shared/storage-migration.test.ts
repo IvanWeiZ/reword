@@ -286,7 +286,7 @@ describe('migrate', () => {
 
       const result = migrate(v5Data as any);
 
-      expect(result.schemaVersion).toBe(6);
+      expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
       expect(result.settings.providerApiKeys.gemini).toBe('AIzaSyOldKey123');
       expect(result.settings.aiProvider).toBe('gemini');
       expect(result.settings.preferredLanguage).toBe('');
@@ -324,7 +324,7 @@ describe('migrate', () => {
 
       const result = migrate(v5Data as any);
 
-      expect(result.schemaVersion).toBe(6);
+      expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
       expect(result.settings.providerApiKeys.gemini).toBe('');
       expect(result.settings.aiProvider).toBe('gemini');
       expect(result.settings.preferredLanguage).toBe('');

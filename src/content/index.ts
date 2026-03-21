@@ -147,6 +147,15 @@ function init(): void {
   let analyzing = false;
   let cachedInput: HTMLElement | null = null;
   let preferredLanguage: string | undefined;
+  let blockBarActive = false;
+  let rewordNonce: string | null = null;
+
+  // Receive nonce from MAIN world (shadow-pierce.ts) for verified messaging
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'reword-nonce' && e.data.nonce) {
+      rewordNonce = e.data.nonce;
+    }
+  });
 
   const banner = createWarningBanner();
 
@@ -154,6 +163,7 @@ function init(): void {
   function acceptRewrite(rewriteText: string): void {
     adapter.writeBack(rewriteText);
     banner.hide();
+    blockBarActive = false;
     window.postMessage({ type: 'reword-unblock' }, '*');
     if (cachedInput) cachedInput.dispatchEvent(new Event('input', { bubbles: true }));
     sendMessage({ type: 'increment-stat', stat: 'rewritesAccepted' });
@@ -176,11 +186,24 @@ function init(): void {
     onSuppress: (text) => sendMessage({ type: 'suppress-phrase', text }),
   });
 
-  // Load theme and preferred language
+  // Load theme, preferred language, and post suppressions to MAIN world
   sendMessage({ type: 'get-settings' }).then((resp) => {
     if (resp.type === 'settings') {
       popup.setTheme(resp.data.settings.theme);
       preferredLanguage = resp.data.settings.preferredLanguage || undefined;
+
+      // Post suppressions to MAIN world for quickScore filtering
+      window.postMessage(
+        {
+          type: 'reword-suppressions',
+          nonce: rewordNonce,
+          suppressions: (resp.data.settings.suppressedPhrases || []).map((rec) => ({
+            phrase: rec.phrase,
+            recipientId: rec.recipientId ?? null,
+          })),
+        },
+        '*',
+      );
     }
   });
 
@@ -195,8 +218,10 @@ function init(): void {
     analyzing = true;
     currentText = text;
 
-    // Show warning immediately
-    banner.show(text);
+    // Show warning immediately (unless block bar is handling it)
+    if (!blockBarActive) {
+      banner.show(text);
+    }
 
     try {
       const recipientId = adapter.getRecipientIdentifier?.() ?? undefined;
@@ -212,9 +237,27 @@ function init(): void {
 
       if (response.type === 'analysis-result' && response.result.shouldFlag) {
         currentResult = response.result;
-        banner.showAnalysis(response.result, text);
 
-        // Wire up rewrite buttons
+        // Post to MAIN world for the block bar
+        window.postMessage(
+          {
+            type: 'reword-ai-result',
+            nonce: rewordNonce,
+            result: {
+              issues: response.result.issues,
+              explanation: response.result.explanation,
+              rewrites: response.result.rewrites,
+            },
+          },
+          '*',
+        );
+
+        // Show analysis in the blue banner (unless block bar is active)
+        if (!blockBarActive) {
+          banner.showAnalysis(response.result, text);
+        }
+
+        // Wire up rewrite buttons (only relevant when banner is visible)
         document.querySelectorAll('.reword-use-rewrite').forEach((btn) => {
           btn.addEventListener('click', () => {
             const idx = parseInt(btn.getAttribute('data-index') ?? '0');
@@ -236,10 +279,16 @@ function init(): void {
       } else {
         banner.hide();
         currentResult = null;
+
+        // Post unblock to MAIN world — AI says no flag
+        window.postMessage({ type: 'reword-unblock' }, '*');
+        blockBarActive = false;
       }
     } catch (err) {
       console.warn('[Reword] analysis error:', err);
       banner.hide();
+      blockBarActive = false;
+      window.postMessage({ type: 'reword-unblock' }, '*');
     }
     analyzing = false;
   }
@@ -264,8 +313,10 @@ function init(): void {
       return;
     }
 
-    // Show warning immediately — don't wait for AI
-    banner.show(text);
+    // Show warning immediately — don't wait for AI (unless block bar is active)
+    if (!blockBarActive) {
+      banner.show(text);
+    }
     console.log('[Reword] flagged, score:', score.toFixed(2), 'text:', text.slice(0, 50));
 
     // Debounce the full AI analysis for detailed rewrites
@@ -315,10 +366,47 @@ function init(): void {
   // Listen for blocked Enter from shadow-pierce.js (MAIN world)
   window.addEventListener('message', (e) => {
     if (e.data?.type !== 'reword-send-intercept') return;
+
+    // Cancel any stale debounce timer
+    if (debounceTimer) clearTimeout(debounceTimer);
+
+    blockBarActive = true;
+    banner.hide(); // Hide stale blue banner — block bar takes over
+    analyzing = false; // Force-reset so send-intercept analysis always wins over stale in-flight
+
     const text = e.data.text ?? '';
     if (text.length < MIN_MESSAGE_LENGTH) return;
     console.log('[Reword] send intercepted via shadow-pierce:', text.slice(0, 50));
     analyzeMessage(text);
+  });
+
+  // Listen for rewrite acceptance from MAIN world block bar
+  window.addEventListener('message', (e) => {
+    if (e.data?.type !== 'reword-apply-rewrite') return;
+    const text = e.data.text;
+    if (text && adapter) {
+      acceptRewrite(text);
+    }
+  });
+
+  // Listen for phrase suppression from MAIN world block bar
+  window.addEventListener('message', (e) => {
+    if (e.data?.type !== 'reword-suppress-phrase') return;
+    const phrase = e.data.phrase;
+    if (!phrase) return;
+
+    const recipientId = adapter.getRecipientIdentifier?.() ?? null;
+    sendMessage({ type: 'suppress-phrase', text: phrase, recipientId });
+
+    // Update MAIN world suppression cache
+    window.postMessage(
+      {
+        type: 'reword-suppressions-add',
+        nonce: rewordNonce,
+        suppression: { phrase, recipientId },
+      },
+      '*',
+    );
   });
 }
 

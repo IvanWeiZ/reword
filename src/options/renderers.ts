@@ -131,9 +131,9 @@ export function renderSuppressedPhrases(data: StoredData) {
   }
   list.innerHTML = data.settings.suppressedPhrases
     .map(
-      (phrase, i) => `
+      (record, i) => `
       <div class="suppressed-item">
-        <span>${esc(phrase)}</span>
+        <span>${esc(record.phrase)}</span>
         <button data-remove-suppressed="${i}">Remove</button>
       </div>
     `,

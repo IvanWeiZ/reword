@@ -146,8 +146,8 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
       }
       // Check explicit suppressedPhrases list (exact match or substring)
       const textLower = message.textSnippet.toLowerCase();
-      const phraseMatch = data.settings.suppressedPhrases.some((phrase) => {
-        const phraseLower = phrase.toLowerCase();
+      const phraseMatch = data.settings.suppressedPhrases.some((record) => {
+        const phraseLower = record.phrase.toLowerCase();
         return textLower === phraseLower || textLower.includes(phraseLower);
       });
       return { type: 'suppression-result', suppressed: phraseMatch };
@@ -156,8 +156,12 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
     case 'suppress-phrase': {
       const data = await loadStoredData();
       const text = message.text;
-      if (text && !data.settings.suppressedPhrases.includes(text)) {
-        data.settings.suppressedPhrases.push(text);
+      const recipientId = message.recipientId ?? null;
+      const alreadyExists = data.settings.suppressedPhrases.some(
+        (r) => r.phrase === text && r.recipientId === recipientId,
+      );
+      if (text && !alreadyExists) {
+        data.settings.suppressedPhrases.push({ phrase: text, recipientId });
         await saveStoredData(data);
       }
       return { type: 'settings', data };
@@ -166,7 +170,7 @@ export async function handleMessage(message: MessageToBackground): Promise<Messa
     case 'remove-suppressed-phrase': {
       const data = await loadStoredData();
       data.settings.suppressedPhrases = data.settings.suppressedPhrases.filter(
-        (p) => p !== message.text,
+        (r) => r.phrase !== message.text,
       );
       await saveStoredData(data);
       return { type: 'settings', data };

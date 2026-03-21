@@ -182,7 +182,10 @@ describe('handleMessage', () => {
     await mockStorage.local.set({ reword: DEFAULT_STORED_DATA });
     await handleMessage({ type: 'suppress-phrase', text: 'whatever I guess' });
     const result = await handleMessage({ type: 'get-settings' });
-    expect((result as any).data.settings.suppressedPhrases).toContain('whatever I guess');
+    expect((result as any).data.settings.suppressedPhrases).toContainEqual({
+      phrase: 'whatever I guess',
+      recipientId: null,
+    });
   });
 
   it('suppressed phrase is detected on next check-suppressed (exact match)', async () => {
@@ -221,8 +224,9 @@ describe('handleMessage', () => {
     await handleMessage({ type: 'suppress-phrase', text: 'whatever' });
     const result = await handleMessage({ type: 'get-settings' });
     expect(
-      (result as any).data.settings.suppressedPhrases.filter((p: string) => p === 'whatever')
-        .length,
+      (result as any).data.settings.suppressedPhrases.filter(
+        (r: any) => r.phrase === 'whatever' && r.recipientId === null,
+      ).length,
     ).toBe(1);
   });
 
@@ -231,7 +235,7 @@ describe('handleMessage', () => {
       ...DEFAULT_STORED_DATA,
       settings: {
         ...DEFAULT_STORED_DATA.settings,
-        suppressedPhrases: ['whatever I guess'],
+        suppressedPhrases: [{ phrase: 'whatever I guess', recipientId: null }],
       },
     };
     await mockStorage.local.set({ reword: dataWithSuppressed });

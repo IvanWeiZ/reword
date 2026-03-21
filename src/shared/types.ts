@@ -31,7 +31,7 @@ export interface Settings {
   theme: Theme;
   rewritePersonas: RewritePersona[];
   analyzeIncoming: boolean;
-  suppressedPhrases: string[];
+  suppressedPhrases: SuppressionRecord[];
 }
 
 export type Theme = 'auto' | 'light' | 'dark';
@@ -72,6 +72,11 @@ export interface DismissedPattern {
   normalized: string;
   count: number;
   suppressed: boolean;
+}
+
+export interface SuppressionRecord {
+  phrase: string;
+  recipientId: string | null; // null = global (all contacts), string = contact-scoped
 }
 
 // --- Provider types ---
@@ -204,7 +209,7 @@ export type MessageToBackground =
   | { type: 'record-flag'; event: FlagEvent }
   | { type: 'record-dismiss'; textSnippet: string; categories?: string[] }
   | { type: 'check-suppressed'; textSnippet: string }
-  | { type: 'suppress-phrase'; text: string }
+  | { type: 'suppress-phrase'; text: string; recipientId?: string | null }
   | { type: 'remove-suppressed-phrase'; text: string }
   | { type: 'get-category-boosts' }
   | { type: 'reset-learned-preferences' }

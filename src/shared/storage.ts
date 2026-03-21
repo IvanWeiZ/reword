@@ -96,6 +96,24 @@ const migrations: Record<number, MigrationFn> = {
     data.schemaVersion = 6;
     return data;
   },
+  7: (data) => {
+    // v6 → v7: Convert suppressedPhrases from string[] to SuppressionRecord[]
+    if (
+      Array.isArray(data.settings?.suppressedPhrases) &&
+      data.settings.suppressedPhrases.length > 0
+    ) {
+      if (typeof (data.settings.suppressedPhrases as any)[0] === 'string') {
+        data.settings.suppressedPhrases = (data.settings.suppressedPhrases as any).map(
+          (phrase: string) => ({
+            phrase,
+            recipientId: null, // Global suppression (legacy)
+          }),
+        );
+      }
+    }
+    data.schemaVersion = 7;
+    return data;
+  },
 };
 
 export function migrate(data: StoredData): StoredData {

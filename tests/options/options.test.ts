@@ -553,7 +553,10 @@ describe('suppressed phrases in options', () => {
     await freshSetup({
       settings: {
         ...DEFAULT_STORED_DATA.settings,
-        suppressedPhrases: ['whatever I guess', 'fine then'],
+        suppressedPhrases: [
+          { phrase: 'whatever I guess', recipientId: null },
+          { phrase: 'fine then', recipientId: null },
+        ],
       },
     });
     await initModule();
@@ -575,7 +578,10 @@ describe('suppressed phrases in options', () => {
     await freshSetup({
       settings: {
         ...DEFAULT_STORED_DATA.settings,
-        suppressedPhrases: ['whatever I guess', 'fine then'],
+        suppressedPhrases: [
+          { phrase: 'whatever I guess', recipientId: null },
+          { phrase: 'fine then', recipientId: null },
+        ],
       },
     });
     await initModule();
@@ -586,8 +592,10 @@ describe('suppressed phrases in options', () => {
     await tick();
 
     const stored = await getStoredData();
-    expect(stored.settings.suppressedPhrases).toEqual(['fine then']);
-    expect(stored.settings.suppressedPhrases).not.toContain('whatever I guess');
+    expect(stored.settings.suppressedPhrases).toEqual([{ phrase: 'fine then', recipientId: null }]);
+    expect(stored.settings.suppressedPhrases.map((r) => r.phrase)).not.toContain(
+      'whatever I guess',
+    );
   });
 });
 

@@ -343,6 +343,9 @@ describe('content script init() orchestration', () => {
 
     await import('../../src/content/index');
     await flushAsync();
+    // Clear any timeouts from initialization (e.g. postMessage for suppressions)
+    // so they don't interfere with debounce-timer assertions in tests.
+    timeoutCallbacks.clear();
   }
 
   async function fireDebounceTimers(): Promise<void> {
