@@ -63,11 +63,13 @@ Each platform (Gmail, LinkedIn, Twitter) has an adapter in `src/adapters/` imple
 
 | Constant                        | Value | Purpose                                       |
 | ------------------------------- | ----- | --------------------------------------------- |
-| `DEBOUNCE_MS`                   | 2000  | Wait after user stops typing before analyzing |
-| `MIN_MESSAGE_LENGTH`            | 10    | Minimum chars to trigger analysis             |
-| `HEURISTIC_THRESHOLD`           | 0.3   | Local heuristic score threshold (0-1)         |
+| `DEBOUNCE_MS`                   | 800   | Wait after user stops typing before analyzing |
+| `AI_DEBOUNCE_MS`                | 2000  | Wait before triggering full AI analysis       |
+| `MIN_MESSAGE_LENGTH`            | 3     | Minimum chars to trigger analysis             |
+| `HEURISTIC_THRESHOLD`           | 0.38  | Local heuristic score threshold (0-1)         |
 | `ONDEVICE_CONFIDENCE_THRESHOLD` | 0.8   | On-device AI confidence cutoff                |
-| `API_TIMEOUT_MS`                | 5000  | Gemini API call timeout                       |
+| `API_TIMEOUT_MS`                | 5000  | AI provider API call timeout                  |
+| `CURRENT_SCHEMA_VERSION`        | 7     | Storage schema version (latest migration)     |
 
 ## Testing
 

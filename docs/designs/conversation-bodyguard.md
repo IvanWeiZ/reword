@@ -80,19 +80,19 @@ Cherry-picked expansions:
 
 From design doc (unchanged):
 
-- [ ] Block banner upgrades with AI-generated explanations, issue labels, and rewrite options
-- [ ] `reword-ai-result` message channel works from isolated world to MAIN world
-- [ ] Recipient ID contract verified across all adapters
-- [ ] All 8 platform adapters work on live sites
-- [ ] Existing tests pass; new tests cover AI send-blocking flow
+- [x] Block banner upgrades with AI-generated explanations, issue labels, and rewrite options
+- [x] `reword-ai-result` message channel works from isolated world to MAIN world
+- [ ] Recipient ID contract verified across all adapters _(requires manual testing on live sites)_
+- [ ] All 8 platform adapters work on live sites _(requires manual smoke testing)_
+- [x] Existing tests pass; new tests cover AI send-blocking flow (580 unit + 26 e2e)
 
 Added for cherry-picks:
 
-- [ ] Keyboard shortcuts (1/2/3/Esc/Enter) work in block bar
-- [ ] Blue warning banner hidden when block bar is active
-- [ ] Undo restores original text after rewrite acceptance
-- [ ] Block bar adapts to dark mode on all platforms
-- [ ] Contact-scoped phrase suppression prevents re-flagging
+- [x] Keyboard shortcuts (1/2/3/Esc/Enter) work in block bar
+- [x] Blue warning banner hidden when block bar is active
+- [x] Undo restores original text after rewrite acceptance
+- [x] Block bar adapts to dark mode on all platforms
+- [x] Contact-scoped phrase suppression prevents re-flagging
 
 ## Deferred to TODOS.md
 
