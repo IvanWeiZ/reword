@@ -11,7 +11,6 @@ const shadowPierceCode = readFileSync(resolve(__dir, '../../dist/shadow-pierce.j
 // Text that scores above 0.38 threshold
 const HARSH_TEXT = 'you are completely useless!!';
 const PA_TEXT = 'per my last email, as I already mentioned';
-const PROFANITY_TEXT = 'fuck this project';
 
 // Mock AI result matching the expected schema
 const MOCK_AI_RESULT = {
