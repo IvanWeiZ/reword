@@ -48,11 +48,11 @@ If you've never built a Chrome extension, here's the minimum you need to know.
 
 A Chrome extension runs code in three completely separate environments. They can't share variables — they communicate by sending messages.
 
-| Context | File | What it can do |
-|---|---|---|
-| **Content Script** | `content.js` | Runs *inside* the webpage. Can read and modify the page's HTML. |
-| **Background Service Worker** | `service-worker.js` | Runs in the background. Can make network requests (Gemini API). Persists between tabs. |
-| **Options Page** | `options/options.html` | A regular webpage that opens when the user clicks "Options". |
+| Context                       | File                   | What it can do                                                                         |
+| ----------------------------- | ---------------------- | -------------------------------------------------------------------------------------- |
+| **Content Script**            | `content.js`           | Runs _inside_ the webpage. Can read and modify the page's HTML.                        |
+| **Background Service Worker** | `service-worker.js`    | Runs in the background. Can make network requests (Gemini API). Persists between tabs. |
+| **Options Page**              | `options/options.html` | A regular webpage that opens when the user clicks "Options".                           |
 
 Think of the content script as the eyes and hands (it sees the page and can touch it), and the service worker as the brain (it does the thinking).
 
@@ -80,16 +80,19 @@ All message types are defined in `src/shared/types.ts` as `MessageToBackground` 
 ```json
 "content_scripts": [{ "matches": ["https://mail.google.com/*", ...], "js": ["content.js"] }]
 ```
+
 → Chrome automatically injects `content.js` into Gmail, LinkedIn, Twitter pages.
 
 ```json
 "background": { "service_worker": "service-worker.js" }
 ```
+
 → Chrome runs `service-worker.js` in the background.
 
 ```json
 "host_permissions": ["https://generativelanguage.googleapis.com/*"]
 ```
+
 → Allows the service worker to call the Gemini API.
 
 ---
@@ -122,9 +125,11 @@ If you want to add support for a new platform (say, Slack), you create `src/adap
 ```typescript
 // src/content/observer.ts
 const observer = new InputObserver({
-  debounceMs: 2000,      // wait 2 seconds after the user stops typing
-  minLength: 10,         // ignore "ok" and "thanks"
-  onAnalyze: async (text) => { /* ... */ },
+  debounceMs: 2000, // wait 2 seconds after the user stops typing
+  minLength: 10, // ignore "ok" and "thanks"
+  onAnalyze: async (text) => {
+    /* ... */
+  },
 });
 observer.observe(inputField);
 ```
@@ -169,7 +174,7 @@ It also fetches the user's relationship profile for this domain first (e.g., Gma
 If the service worker comes back with `shouldFlag: true`:
 
 ```typescript
-trigger.show(response.result.riskLevel);  // shows the orange "Review tone" badge
+trigger.show(response.result.riskLevel); // shows the orange "Review tone" badge
 triggerCleanup = adapter.placeTriggerIcon(trigger.element); // pins it near Send
 ```
 
@@ -205,6 +210,7 @@ if (ondeviceResult && !ondeviceResult.shouldFlag && ondeviceResult.confidence > 
 
 **Tier 2 — Gemini (`src/background/gemini-client.ts`):**
 The full analysis. We build a detailed prompt that includes:
+
 - The draft message
 - The relationship type and sensitivity level
 - Recent messages from the thread (for context)
@@ -251,6 +257,7 @@ interface StoredData {
 ```
 
 `loadStoredData()` handles two things automatically:
+
 1. **Schema migration** — if the stored data has an older `schemaVersion`, it merges with defaults
 2. **Monthly counter reset** — if the month has rolled over, `monthlyApiCalls` resets to 0
 
@@ -360,6 +367,7 @@ Here's what happens when you type `"Whatever, I guess that's fine."` in Gmail an
 12. **`gemini-client.ts`** — as chunks arrive, calls `onStream(partialText)` (currently a no-op — streaming to the popup card is a future improvement). Accumulates full response text.
 
 13. **`gemini-client.ts`** — calls `parseAnalysisResponse()` on the final text. Returns:
+
     ```json
     { "shouldFlag": true, "riskLevel": "medium", "explanation": "Might come across as dismissive", "rewrites": [...] }
     ```
@@ -388,7 +396,7 @@ Here's what happens when you type `"Whatever, I guess that's fine."` in Gmail an
 
 ```bash
 # 1. Clone and install
-cd /Users/weizheng/Documents/projects/reword
+cd reword
 npm install
 
 # 2. Run tests
@@ -431,6 +439,7 @@ Want to add support for Slack? Here's exactly what to do:
    - `scrapeThreadContext()` — return recent messages (or `[]`)
 
 2. **Add the adapter to `src/content/index.ts`**:
+
    ```typescript
    import { SlackAdapter } from '../adapters/slack';
    // in detectAdapter():
@@ -438,6 +447,7 @@ Want to add support for Slack? Here's exactly what to do:
    ```
 
 3. **Add host permissions to `manifest.json`**:
+
    ```json
    "host_permissions": ["https://app.slack.com/*"]
    ```
